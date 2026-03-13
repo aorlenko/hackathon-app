@@ -1,0 +1,45 @@
+---
+description: Enforce .NET/C# backend coding best practices for readability, reliability, and maintainability.
+globs: backend/**/*.cs
+alwaysApply: false
+---
+
+# .NET C# Best Practices (Backend)
+
+- Prefer clear, small methods and single-responsibility classes.
+- Prefer concise methods always target methods no longer than 30 lines of code. If the method is long, extract private methods so that upper level has higher-level concepts while downstream methods go to low-level specifics.
+- Use dependency injection; avoid `new` for infrastructure dependencies inside services/controllers.
+- Use async end-to-end for I/O (`Task`/`Task<T>`), pass `CancellationToken`, and avoid `.Result`/`.Wait()`.
+- Validate inputs at boundaries; return explicit, meaningful errors.
+- Never swallow exceptions; log with context and either handle or rethrow.
+- Use `var` only when the type is obvious from the right-hand side.
+- Favor immutable DTOs/records for request/response contracts.
+- Use nullable reference types correctly; avoid `!` unless truly safe and documented.
+- Keep business logic out of controllers; place it in application/domain services.
+- Write tests for critical behavior and edge cases before marking work complete.
+
+```csharp
+// ❌ BAD
+public IActionResult Get(int id) {
+    var order = _repo.GetAsync(id).Result;
+    return Ok(order);
+}
+
+// ✅ GOOD
+public async Task<IActionResult> Get(int id, CancellationToken ct) {
+    var order = await _repo.GetAsync(id, ct);
+    return order is null ? NotFound() : Ok(order);
+}
+```
+
+```csharp
+// ❌ BAD
+catch (Exception) { }
+
+// ✅ GOOD
+catch (Exception ex) {
+    _logger.LogError(ex, "Failed to process order {OrderId}", orderId);
+    throw;
+}
+```
+

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+bin/
+obj/
+.git/
+.github/
+.vscode/
+.idea/
+TestResults/
+*.log
+*.tmp
+.env
+.env.*
+docker-data/
+azurite-data/

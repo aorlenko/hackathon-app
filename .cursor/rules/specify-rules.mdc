@@ -1,0 +1,37 @@
+﻿---
+description: Project Development Guidelines
+globs: ["**/*"]
+alwaysApply: true
+---
+# specit_trading_test Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-03-13
+
+## Active Technologies
+
+- C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation) + ASP.NET Core Minimal APIs, SignalR, EF Core (SqlServer), Azure Service Bus SDK, Azure Identity, Auth0 SPA + JWT APIs, OpenTelemetry + Application Insights exporter (001-realtime-trading-platform)
+
+## Project Structure
+
+```text
+backend/
+frontend/
+tests/
+```
+
+## Commands
+
+npm test; npm run lint
+
+## Code Style
+
+C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation): Follow standard conventions
+
+## Recent Changes
+
+- 001-realtime-trading-platform: Added C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation) + ASP.NET Core Minimal APIs, SignalR, EF Core (SqlServer), Azure Service Bus SDK, Azure Identity, Auth0 SPA + JWT APIs, OpenTelemetry + Application Insights exporter
+
+<!-- MANUAL ADDITIONS START -->
+## Implementation rules
+- Always consider using agents from ".cursor/agents/" folder when doing implementation of tasks
+<!-- MANUAL ADDITIONS END -->

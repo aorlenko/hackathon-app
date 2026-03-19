@@ -1,0 +1,140 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: trading-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:-LocalDevPassword123!}
+    ports:
+      - "14333:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - trading
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: trading-azurite
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - azurite-data:/data
+    networks:
+      - trading
+
+  market-service:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: apps/services/market-service/Dockerfile
+    image: ${MARKET_SERVICE_IMAGE:-market-service:dev}
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__Sql: Server=sqlserver,1433;Database=TradingPlatform;User Id=sa;Password=${SQL_SA_PASSWORD:-LocalDevPassword123!};TrustServerCertificate=True;
+      ConnectionStrings__ServiceBus: ${SERVICEBUS_CONNECTION_STRING:-}
+      Messaging__Transport: AzureServiceBus
+      Messaging__TopicName: trading.lifecycle
+      Messaging__SubscriptionName: market-service.relay-realtime
+      ApplicationInsights__ConnectionString: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+      Auth0__Domain: ${AUTH0_DOMAIN:-}
+      Auth0__Audience: ${AUTH0_AUDIENCE:-}
+    ports:
+      - "7001:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - trading
+
+  trade-service:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: apps/services/trade-service/Dockerfile
+    image: ${TRADE_SERVICE_IMAGE:-trade-service:dev}
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__Sql: Server=sqlserver,1433;Database=TradingPlatform;User Id=sa;Password=${SQL_SA_PASSWORD:-LocalDevPassword123!};TrustServerCertificate=True;
+      ConnectionStrings__ServiceBus: ${SERVICEBUS_CONNECTION_STRING:-}
+      Messaging__Transport: AzureServiceBus
+      Messaging__TopicName: trading.lifecycle
+      Messaging__SubscriptionName: trade-service.on-order-matched
+      ApplicationInsights__ConnectionString: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+      Auth0__Domain: ${AUTH0_DOMAIN:-}
+      Auth0__Audience: ${AUTH0_AUDIENCE:-}
+    ports:
+      - "7002:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - trading
+
+  settlement-service:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: apps/services/settlement-service/Dockerfile
+    image: ${SETTLEMENT_SERVICE_IMAGE:-settlement-service:dev}
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__Sql: Server=sqlserver,1433;Database=TradingPlatform;User Id=sa;Password=${SQL_SA_PASSWORD:-LocalDevPassword123!};TrustServerCertificate=True;
+      ConnectionStrings__ServiceBus: ${SERVICEBUS_CONNECTION_STRING:-}
+      Messaging__Transport: AzureServiceBus
+      Messaging__TopicName: trading.lifecycle
+      Messaging__SubscriptionName: settlement-service.on-trade-recorded
+      ApplicationInsights__ConnectionString: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+      Auth0__Domain: ${AUTH0_DOMAIN:-}
+      Auth0__Audience: ${AUTH0_AUDIENCE:-}
+    ports:
+      - "7003:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - trading
+
+  frontend-spa:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: apps/frontend-spa/Dockerfile
+      args:
+        VITE_AUTH0_DOMAIN: ${AUTH0_DOMAIN:-}
+        VITE_AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
+        VITE_AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:-}
+        VITE_MARKET_API_BASE_URL: ${MARKET_API_BASE_URL:-http://localhost:7001}
+        VITE_TRADE_API_BASE_URL: ${TRADE_API_BASE_URL:-http://localhost:7002}
+        VITE_SETTLEMENT_API_BASE_URL: ${SETTLEMENT_API_BASE_URL:-http://localhost:7003}
+        VITE_MARKET_HUB_URL: ${VITE_MARKET_HUB_URL:-http://localhost:7001/hubs/market}
+        VITE_ENABLE_DEMO_AUTH: ${VITE_ENABLE_DEMO_AUTH:-true}
+    image: ${FRONTEND_IMAGE:-frontend-spa:dev}
+    ports:
+      - "5173:80"
+    depends_on:
+      - market-service
+      - trade-service
+      - settlement-service
+    networks:
+      - trading
+
+networks:
+  trading:
+    name: trading-network
+
+volumes:
+  sqlserver-data:
+  azurite-data:

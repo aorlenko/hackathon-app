@@ -1,0 +1,4 @@
+C:\work\my\specit_trading_test\artifacts\settlementapp-obj\Debug\net8.0\Trading.Observability.GeneratedMSBuildEditorConfig.editorconfig
+C:\work\my\specit_trading_test\artifacts\settlementapp-obj\Debug\net8.0\Trading.Observability.AssemblyInfoInputs.cache
+C:\work\my\specit_trading_test\artifacts\settlementapp-obj\Debug\net8.0\Trading.Observability.AssemblyInfo.cs
+C:\work\my\specit_trading_test\artifacts\settlementapp-obj\Debug\net8.0\Trading.Observability.csproj.CoreCompileInputs.cache

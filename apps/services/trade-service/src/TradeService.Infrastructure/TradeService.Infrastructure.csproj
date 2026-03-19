@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TradeService.Domain\TradeService.Domain.csproj" />
+    <ProjectReference Include="..\TradeService.Application\TradeService.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\building-blocks\messaging\src\Trading.Messaging\Trading.Messaging.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\contracts\events\src\Trading.Contracts.Events\Trading.Contracts.Events.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

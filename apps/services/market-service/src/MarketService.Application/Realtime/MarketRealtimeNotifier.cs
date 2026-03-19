@@ -1,0 +1,47 @@
+using Trading.Contracts.Events;
+using Trading.Contracts.Http;
+
+namespace MarketService.Application.Realtime;
+
+public interface IMarketHubPublisher
+{
+    Task PublishOrderBookAsync(string symbol, OrderBookDto payload, CancellationToken cancellationToken = default);
+    Task PublishTradeAsync(string symbol, TradeRecordedRealtimeDto payload, CancellationToken cancellationToken = default);
+    Task PublishSettlementAsync(IEnumerable<string> userIds, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
+}
+
+public interface IMarketRealtimeNotifier
+{
+    Task NotifyOrderBookUpdatedAsync(string symbol, CancellationToken cancellationToken = default);
+    Task NotifyTradeRecordedAsync(TradeRecorded @event, CancellationToken cancellationToken = default);
+    Task NotifySettlementUpdatedAsync(string buyerUserId, string sellerUserId, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
+}
+
+public sealed class MarketRealtimeNotifier : IMarketRealtimeNotifier
+{
+    private readonly Markets.GetOrderBookHandler _orderBookHandler;
+    private readonly IMarketHubPublisher _publisher;
+
+    public MarketRealtimeNotifier(Markets.GetOrderBookHandler orderBookHandler, IMarketHubPublisher publisher)
+    {
+        _orderBookHandler = orderBookHandler;
+        _publisher = publisher;
+    }
+
+    public async Task NotifyOrderBookUpdatedAsync(string symbol, CancellationToken cancellationToken = default)
+    {
+        var snapshot = await _orderBookHandler.HandleAsync(symbol, cancellationToken).ConfigureAwait(false);
+        await _publisher.PublishOrderBookAsync(symbol, snapshot, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task NotifyTradeRecordedAsync(TradeRecorded @event, CancellationToken cancellationToken = default)
+    {
+        var payload = new TradeRecordedRealtimeDto(@event.TradeId, @event.Symbol, @event.Price, @event.Quantity, @event.ExecutedAtUtc);
+        return _publisher.PublishTradeAsync(@event.Symbol, payload, cancellationToken);
+    }
+
+    public Task NotifySettlementUpdatedAsync(string buyerUserId, string sellerUserId, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
+    {
+        return _publisher.PublishSettlementAsync([buyerUserId, sellerUserId], payload, cancellationToken);
+    }
+}

@@ -1,0 +1,4 @@
+C:\work\my\specit_trading_test\artifacts\marketapp-obj\Debug\net8.0\Trading.Auth.GeneratedMSBuildEditorConfig.editorconfig
+C:\work\my\specit_trading_test\artifacts\marketapp-obj\Debug\net8.0\Trading.Auth.AssemblyInfoInputs.cache
+C:\work\my\specit_trading_test\artifacts\marketapp-obj\Debug\net8.0\Trading.Auth.AssemblyInfo.cs
+C:\work\my\specit_trading_test\artifacts\marketapp-obj\Debug\net8.0\Trading.Auth.csproj.CoreCompileInputs.cache

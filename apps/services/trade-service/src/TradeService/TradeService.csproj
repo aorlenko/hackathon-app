@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TradeService.Application\TradeService.Application.csproj" />
+    <ProjectReference Include="..\TradeService.Infrastructure\TradeService.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\building-blocks\configuration\src\Trading.Configuration\Trading.Configuration.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\building-blocks\auth\src\Trading.Auth\Trading.Auth.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\building-blocks\observability\src\Trading.Observability\Trading.Observability.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\contracts\http\src\Trading.Contracts.Http\Trading.Contracts.Http.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>specit-trading-test-trade-service</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\TradeService.Api\**\*.cs" />
+  </ItemGroup>
+
+</Project>

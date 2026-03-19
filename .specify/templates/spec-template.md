@@ -90,6 +90,24 @@
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
 
+### Experience Consistency Requirements
+
+- **UX-001**: User-facing flows MUST reuse established interaction patterns and
+  terminology unless an exception is explicitly approved.
+- **UX-002**: Error and empty states MUST provide clear, actionable guidance aligned
+  with existing product voice and accessibility expectations.
+- **UX-003**: UI changes MUST document affected components, states, and validation
+  behavior so implementation and review can verify consistency.
+
+### Performance Requirements
+
+- **PRF-001**: Feature MUST define measurable performance budgets relevant to its
+  primary user path (for example latency, throughput, render time, or startup time).
+- **PRF-002**: Feature MUST include a validation method for each budget (for example
+  benchmark, profiling, load test, or production metric check).
+- **PRF-003**: Feature MUST define acceptable regression limits and mitigation behavior
+  when limits are exceeded.
+
 *Example of marking unclear requirements:*
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
@@ -113,3 +131,5 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-005**: [Consistency metric, e.g., "0 critical UX consistency deviations in design/QA review"]
+- **SC-006**: [Performance metric, e.g., "p95 response time remains under target budget under expected load"]

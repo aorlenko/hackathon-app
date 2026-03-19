@@ -1,0 +1,4 @@
+C:\work\my\specit_trading_test\artifacts\verify\marketinfra-obj\Debug\net8.0\MarketService.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\work\my\specit_trading_test\artifacts\verify\marketinfra-obj\Debug\net8.0\MarketService.Domain.AssemblyInfoInputs.cache
+C:\work\my\specit_trading_test\artifacts\verify\marketinfra-obj\Debug\net8.0\MarketService.Domain.AssemblyInfo.cs
+C:\work\my\specit_trading_test\artifacts\verify\marketinfra-obj\Debug\net8.0\MarketService.Domain.csproj.CoreCompileInputs.cache

@@ -1,0 +1,91 @@
+using MarketService.Api.Endpoints;
+using MarketService.Api.Hubs;
+using MarketService.Application.Abstractions;
+using MarketService.Application.Consumers;
+using MarketService.Application.Matching;
+using MarketService.Application.Markets;
+using MarketService.Application.Orders;
+using MarketService.Application.Realtime;
+using MarketService.Infrastructure.Messaging;
+using MarketService.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Trading.Auth;
+using Trading.Configuration;
+using Trading.Contracts.Events;
+using Trading.Messaging;
+using Trading.Observability;
+
+const string LocalDevCorsPolicy = "LocalDevFrontend";
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddTradingPlatformConfiguration(builder.Configuration, "market-service");
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(LocalDevCorsPolicy, policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+builder.Services.AddTradingJwtAuthentication(builder.Configuration);
+builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
+builder.Services.AddTradingTelemetry("market-service");
+builder.Services.AddTradingMessaging();
+builder.Services.AddDbContext<MarketDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("Sql")));
+builder.Services.AddScoped<IMarketDataStore>(sp => sp.GetRequiredService<MarketDbContext>());
+builder.Services.AddScoped<OrderValidationPolicy>();
+builder.Services.AddScoped<PriceTimeMatchingEngine>();
+builder.Services.AddScoped<GetMarketsHandler>();
+builder.Services.AddScoped<GetOrderBookHandler>();
+builder.Services.AddScoped<ILifecycleEventPublisher, LifecycleEventPublisher>();
+builder.Services.AddScoped<PlaceOrderHandler>();
+builder.Services.AddSingleton<IMarketHubPublisher, SignalRMarketHubPublisher>();
+builder.Services.AddScoped<IMarketRealtimeNotifier, MarketRealtimeNotifier>();
+builder.Services.AddIntegrationEventHandler<TradeRecorded, TradeRecordedRelayConsumer>();
+builder.Services.AddIntegrationEventHandler<SettlementStarted, SettlementRelayConsumer>();
+builder.Services.AddIntegrationEventHandler<SettlementCompleted, SettlementRelayConsumer>();
+
+var app = builder.Build();
+app.UseCors(LocalDevCorsPolicy);
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapMarketsEndpoints();
+app.MapAccountsEndpoints();
+app.MapOrdersEndpoints();
+app.MapHub<MarketHub>("/hubs/market");
+app.Run();
+
+public partial class Program;
+
+internal sealed class SignalRMarketHubPublisher : IMarketHubPublisher
+{
+    private readonly Microsoft.AspNetCore.SignalR.IHubContext<MarketHub> _hubContext;
+
+    public SignalRMarketHubPublisher(Microsoft.AspNetCore.SignalR.IHubContext<MarketHub> hubContext)
+    {
+        _hubContext = hubContext;
+    }
+
+    public Task PublishOrderBookAsync(string symbol, Trading.Contracts.Http.OrderBookDto payload, CancellationToken cancellationToken = default)
+    {
+        return _hubContext.Clients.Group(MarketHub.OrderBookGroup(symbol)).SendCoreAsync("OrderBookUpdated", [payload], cancellationToken);
+    }
+
+    public Task PublishTradeAsync(string symbol, Trading.Contracts.Http.TradeRecordedRealtimeDto payload, CancellationToken cancellationToken = default)
+    {
+        return _hubContext.Clients.Group(MarketHub.TradesGroup(symbol)).SendCoreAsync("TradeRecorded", [payload], cancellationToken);
+    }
+
+    public Task PublishSettlementAsync(IEnumerable<string> userIds, Trading.Contracts.Http.SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
+    {
+        var tasks = userIds.Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(userId => _hubContext.Clients.Group(MarketHub.SettlementGroup(userId)).SendCoreAsync("SettlementUpdated", [payload], cancellationToken));
+        return Task.WhenAll(tasks);
+    }
+}

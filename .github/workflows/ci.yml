@@ -1,0 +1,142 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  infra-validate:
+    name: Validate infra and root orchestration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate docker compose
+        run: npm run compose:config
+
+      - name: Validate Bicep templates
+        shell: pwsh
+        run: npm run infra:validate
+
+  frontend:
+    name: Frontend lint and tests
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('apps/frontend-spa/package.json') != '' }}
+    defaults:
+      run:
+        working-directory: apps/frontend-spa
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/frontend-spa/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint --if-present
+
+      - name: Run frontend tests
+        run: npm test --if-present
+
+      - name: Build frontend
+        run: npm run build --if-present
+
+  backend:
+    name: Backend restore, build, and tests
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('apps/services/TradingPlatform.sln') != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore solution
+        run: dotnet restore apps/services/TradingPlatform.sln
+
+      - name: Build solution
+        run: dotnet build apps/services/TradingPlatform.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test apps/services/TradingPlatform.sln --configuration Release --no-build
+
+  build-images:
+    name: Build and push container images
+    runs-on: ubuntu-latest
+    needs:
+      - infra-validate
+      - frontend
+      - backend
+    if: ${{ github.event_name != 'pull_request' && vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != '' && secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' && hashFiles('apps/**/Dockerfile') != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: frontend-spa
+            dockerfile: apps/frontend-spa/Dockerfile
+            context: apps/frontend-spa
+            repository: frontend-spa
+          - name: market-service
+            dockerfile: apps/services/market-service/Dockerfile
+            context: apps/services/market-service
+            repository: market-service
+          - name: trade-service
+            dockerfile: apps/services/trade-service/Dockerfile
+            context: apps/services/trade-service
+            repository: trade-service
+          - name: settlement-service
+            dockerfile: apps/services/settlement-service/Dockerfile
+            context: apps/services/settlement-service
+            repository: settlement-service
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name "${{ vars.ACR_NAME }}"
+
+      - name: Build and push image
+        run: |
+          if [ ! -f "${{ matrix.dockerfile }}" ]; then
+            echo "Skipping ${{ matrix.name }} because ${{ matrix.dockerfile }} is not present yet."
+            exit 0
+          fi
+          docker build \
+            --file "${{ matrix.dockerfile }}" \
+            --tag "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.repository }}:${{ github.sha }}" \
+            --tag "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.repository }}:latest" \
+            "${{ matrix.context }}"
+          docker push "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.repository }}:${{ github.sha }}"
+          docker push "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.repository }}:latest"

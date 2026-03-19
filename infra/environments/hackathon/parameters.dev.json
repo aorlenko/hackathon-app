@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "projectName": {
+      "value": "trading"
+    },
+    "sqlAdminLogin": {
+      "value": "sqladmintrading"
+    },
+    "auth0Domain": {
+      "value": "tenant-placeholder.us.auth0.com"
+    },
+    "auth0Audience": {
+      "value": "https://trading-platform-api"
+    },
+    "auth0ClientId": {
+      "value": "replace-me"
+    },
+    "alertEmailAddress": {
+      "value": ""
+    },
+    "frontendImage": {
+      "value": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+    },
+    "marketServiceImage": {
+      "value": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+    },
+    "tradeServiceImage": {
+      "value": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+    },
+    "settlementServiceImage": {
+      "value": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+    },
+    "tags": {
+      "value": {
+        "environment": "dev",
+        "owner": "hackathon",
+        "workload": "realtime-trading-platform"
+      }
+    }
+  }
+}

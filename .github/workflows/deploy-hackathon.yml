@@ -1,0 +1,137 @@
+name: deploy-hackathon
+
+on:
+  workflow_dispatch:
+    inputs:
+      environmentName:
+        description: Environment name parameter override.
+        required: true
+        default: dev
+        type: string
+      location:
+        description: Azure region for the resource group.
+        required: true
+        default: eastus
+        type: string
+      resourceGroupName:
+        description: Target Azure resource group.
+        required: true
+        default: rg-trading-hackathon-dev
+        type: string
+      frontendImage:
+        description: Optional frontend image override.
+        required: false
+        default: ""
+        type: string
+      marketServiceImage:
+        description: Optional market service image override.
+        required: false
+        default: ""
+        type: string
+      tradeServiceImage:
+        description: Optional trade service image override.
+        required: false
+        default: ""
+        type: string
+      settlementServiceImage:
+        description: Optional settlement service image override.
+        required: false
+        default: ""
+        type: string
+      runSmoke:
+        description: Run post-deploy smoke checks.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy hackathon environment
+    runs-on: ubuntu-latest
+    environment: hackathon
+    env:
+      SQL_ADMIN_LOGIN: ${{ vars.SQL_ADMIN_LOGIN }}
+      SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+      AUTH0_DOMAIN: ${{ vars.AUTH0_DOMAIN }}
+      AUTH0_AUDIENCE: ${{ vars.AUTH0_AUDIENCE }}
+      AUTH0_CLIENT_ID: ${{ vars.AUTH0_CLIENT_ID }}
+      ALERT_EMAIL_ADDRESS: ${{ vars.ALERT_EMAIL_ADDRESS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Bicep
+        shell: pwsh
+        run: ./scripts/infra/validate-bicep.ps1
+
+      - name: Ensure resource group exists
+        run: az group create --name "${{ inputs.resourceGroupName }}" --location "${{ inputs.location }}"
+
+      - name: What-if deployment
+        shell: pwsh
+        run: >
+          ./scripts/infra/deploy-hackathon.ps1
+          -WhatIf
+          -EnvironmentName "${{ inputs.environmentName }}"
+          -Location "${{ inputs.location }}"
+          -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -FrontendImage "${{ inputs.frontendImage }}"
+          -MarketServiceImage "${{ inputs.marketServiceImage }}"
+          -TradeServiceImage "${{ inputs.tradeServiceImage }}"
+          -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
+
+      - name: Deploy infrastructure and apps
+        shell: pwsh
+        run: >
+          ./scripts/infra/deploy-hackathon.ps1
+          -EnvironmentName "${{ inputs.environmentName }}"
+          -Location "${{ inputs.location }}"
+          -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -FrontendImage "${{ inputs.frontendImage }}"
+          -MarketServiceImage "${{ inputs.marketServiceImage }}"
+          -TradeServiceImage "${{ inputs.tradeServiceImage }}"
+          -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
+
+      - name: Resolve container app endpoints
+        id: endpoints
+        shell: bash
+        run: |
+          PROJECT_NAME=$(jq -r '.parameters.projectName.value' infra/environments/hackathon/parameters.dev.json)
+          ENV_NAME="${{ inputs.environmentName }}"
+          RG="${{ inputs.resourceGroupName }}"
+
+          FRONTEND_APP="frontend-spa-${PROJECT_NAME}-${ENV_NAME}"
+          MARKET_APP="market-service-${PROJECT_NAME}-${ENV_NAME}"
+          TRADE_APP="trade-service-${PROJECT_NAME}-${ENV_NAME}"
+          SETTLEMENT_APP="settlement-service-${PROJECT_NAME}-${ENV_NAME}"
+
+          FRONTEND_URL="https://$(az containerapp show --resource-group "$RG" --name "$FRONTEND_APP" --query 'properties.configuration.ingress.fqdn' -o tsv)"
+          MARKET_API_URL="https://$(az containerapp show --resource-group "$RG" --name "$MARKET_APP" --query 'properties.configuration.ingress.fqdn' -o tsv)"
+          TRADE_API_URL="https://$(az containerapp show --resource-group "$RG" --name "$TRADE_APP" --query 'properties.configuration.ingress.fqdn' -o tsv)"
+          SETTLEMENT_API_URL="https://$(az containerapp show --resource-group "$RG" --name "$SETTLEMENT_APP" --query 'properties.configuration.ingress.fqdn' -o tsv)"
+
+          echo "frontend_url=$FRONTEND_URL" >> "$GITHUB_OUTPUT"
+          echo "market_api_url=$MARKET_API_URL" >> "$GITHUB_OUTPUT"
+          echo "trade_api_url=$TRADE_API_URL" >> "$GITHUB_OUTPUT"
+          echo "settlement_api_url=$SETTLEMENT_API_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Run smoke checks
+        if: ${{ inputs.runSmoke }}
+        shell: pwsh
+        env:
+          FRONTEND_URL: ${{ steps.endpoints.outputs.frontend_url }}
+          MARKET_API_URL: ${{ steps.endpoints.outputs.market_api_url }}
+          TRADE_API_URL: ${{ steps.endpoints.outputs.trade_api_url }}
+          SETTLEMENT_API_URL: ${{ steps.endpoints.outputs.settlement_api_url }}
+        run: ./scripts/infra/smoke-hackathon.ps1

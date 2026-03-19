@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TradeService.Domain\TradeService.Domain.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\building-blocks\messaging\src\Trading.Messaging\Trading.Messaging.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\contracts\http\src\Trading.Contracts.Http\Trading.Contracts.Http.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\contracts\events\src\Trading.Contracts.Events\Trading.Contracts.Events.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

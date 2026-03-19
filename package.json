@@ -1,0 +1,23 @@
+{
+  "name": "specit-trading-test",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Monorepo orchestration for the simplified real-time trading platform.",
+  "scripts": {
+    "build": "dotnet build ./apps/services/TradingPlatform.sln --nologo && npm --prefix ./apps/frontend-spa run build",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/dev/run-local.ps1",
+    "dev:deps": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/dev/run-local.ps1 -DependenciesOnly",
+    "lint": "dotnet build ./apps/services/TradingPlatform.sln --nologo && npm --prefix ./apps/frontend-spa run lint",
+    "compose:config": "docker compose config",
+    "compose:up": "docker compose up -d sqlserver azurite",
+    "compose:down": "docker compose down --remove-orphans",
+    "infra:validate": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/infra/validate-bicep.ps1",
+    "infra:whatif:hackathon": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/infra/deploy-hackathon.ps1 -EnvironmentName dev -WhatIf",
+    "infra:deploy:hackathon": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/infra/deploy-hackathon.ps1 -EnvironmentName dev",
+    "smoke:hackathon": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/infra/smoke-hackathon.ps1",
+    "test": "dotnet test ./apps/services/TradingPlatform.sln --nologo && npm --prefix ./apps/frontend-spa run test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

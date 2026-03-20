@@ -1,8 +1,16 @@
-import type { SettlementRecord, TradeRecord } from "../../contracts/trading";
+import type {
+  AccountIdentity,
+  SettlementRecord,
+  TradeRecord,
+} from "../../contracts/trading";
+import { formatParticipantLabel } from "../account/useResolvedAccountIdentities";
 
 interface LifecycleTraceTableProps {
   trades: TradeRecord[];
   settlements: SettlementRecord[];
+  identities: Map<string, AccountIdentity>;
+  currentUserId?: string | null;
+  currentUserEmail?: string | null;
 }
 
 const settlementByTradeId = (settlements: SettlementRecord[]) =>
@@ -11,6 +19,9 @@ const settlementByTradeId = (settlements: SettlementRecord[]) =>
 export const LifecycleTraceTable = ({
   trades,
   settlements,
+  identities,
+  currentUserId,
+  currentUserEmail,
 }: LifecycleTraceTableProps) => {
   const settlementMap = settlementByTradeId(settlements);
 
@@ -26,10 +37,11 @@ export const LifecycleTraceTable = ({
         <table className="data-table">
           <thead>
             <tr>
-              <th>Trade</th>
-              <th>Symbol</th>
               <th>Execution</th>
+              <th>Symbol</th>
               <th>Quantity</th>
+              <th>Buyer</th>
+              <th>Seller</th>
               <th>Settlement</th>
               <th>Completed</th>
             </tr>
@@ -40,10 +52,23 @@ export const LifecycleTraceTable = ({
 
               return (
                 <tr key={trade.tradeId}>
-                  <td>{trade.tradeId}</td>
-                  <td>{trade.symbol}</td>
                   <td>{new Date(trade.executedAtUtc).toLocaleString()}</td>
+                  <td>{trade.symbol}</td>
                   <td>{trade.quantity}</td>
+                  <td>
+                    {formatParticipantLabel(trade.buyerUserId, identities, {
+                      currentUserId,
+                      currentUserEmail,
+                      fallbackLabel: "Buyer",
+                    })}
+                  </td>
+                  <td>
+                    {formatParticipantLabel(trade.sellerUserId, identities, {
+                      currentUserId,
+                      currentUserEmail,
+                      fallbackLabel: "Seller",
+                    })}
+                  </td>
                   <td>{settlement?.status ?? "PENDING"}</td>
                   <td>
                     {settlement?.completedAtUtc

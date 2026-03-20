@@ -1,6 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SettlementRecord, TradeRecord } from "../../contracts/trading";
 import { useTradingAuth } from "../auth/AuthProvider";
+import {
+  formatParticipantLabel,
+  useResolvedAccountIdentities,
+} from "../account/useResolvedAccountIdentities";
 import { LifecycleTraceTable } from "./LifecycleTraceTable";
 import { getUserSettlementHistory } from "./settlementHistoryApi";
 import { getUserTradeHistory } from "./tradeHistoryApi";
@@ -11,6 +15,18 @@ export const SettlementHistoryPage = () => {
   const [trades, setTrades] = useState<TradeRecord[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const tradeById = useMemo(
+    () => new Map(trades.map((trade) => [trade.tradeId, trade])),
+    [trades],
+  );
+  const participantUserIds = useMemo(
+    () => trades.flatMap((trade) => [trade.buyerUserId, trade.sellerUserId]),
+    [trades],
+  );
+  const participantIdentities = useResolvedAccountIdentities(
+    participantUserIds,
+    auth.accessToken,
+  );
 
   useEffect(() => {
     if (!auth.userId) {
@@ -59,32 +75,68 @@ export const SettlementHistoryPage = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Settlement</th>
-                <th>Trade</th>
-                <th>Status</th>
                 <th>Started</th>
+                <th>Symbol</th>
+                <th>Buyer</th>
+                <th>Seller</th>
+                <th>Status</th>
                 <th>Completed</th>
               </tr>
             </thead>
             <tbody>
-              {settlements.map((settlement) => (
-                <tr key={settlement.settlementId}>
-                  <td>{settlement.settlementId}</td>
-                  <td>{settlement.tradeId}</td>
-                  <td>{settlement.status}</td>
-                  <td>{new Date(settlement.startedAtUtc).toLocaleString()}</td>
-                  <td>
-                    {settlement.completedAtUtc
-                      ? new Date(settlement.completedAtUtc).toLocaleString()
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
+              {settlements.map((settlement) => {
+                const trade = tradeById.get(settlement.tradeId);
+
+                return (
+                  <tr key={settlement.settlementId}>
+                    <td>{new Date(settlement.startedAtUtc).toLocaleString()}</td>
+                    <td>{trade?.symbol ?? "-"}</td>
+                    <td>
+                      {trade
+                        ? formatParticipantLabel(
+                            trade.buyerUserId,
+                            participantIdentities,
+                            {
+                              currentUserId: auth.userId,
+                              currentUserEmail: auth.accountSnapshot?.email,
+                              fallbackLabel: "Buyer",
+                            },
+                          )
+                        : "-"}
+                    </td>
+                    <td>
+                      {trade
+                        ? formatParticipantLabel(
+                            trade.sellerUserId,
+                            participantIdentities,
+                            {
+                              currentUserId: auth.userId,
+                              currentUserEmail: auth.accountSnapshot?.email,
+                              fallbackLabel: "Seller",
+                            },
+                          )
+                        : "-"}
+                    </td>
+                    <td>{settlement.status}</td>
+                    <td>
+                      {settlement.completedAtUtc
+                        ? new Date(settlement.completedAtUtc).toLocaleString()
+                        : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         ) : null}
       </section>
-      <LifecycleTraceTable trades={trades} settlements={settlements} />
+      <LifecycleTraceTable
+        trades={trades}
+        settlements={settlements}
+        identities={participantIdentities}
+        currentUserId={auth.userId}
+        currentUserEmail={auth.accountSnapshot?.email}
+      />
     </section>
   );
 };

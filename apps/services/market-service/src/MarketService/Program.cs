@@ -1,5 +1,6 @@
 using MarketService.Api.Endpoints;
 using MarketService.Api.Hubs;
+using MarketService.Application.Accounts;
 using MarketService.Application.Abstractions;
 using MarketService.Application.Consumers;
 using MarketService.Application.Matching;
@@ -16,6 +17,13 @@ using Trading.Messaging;
 using Trading.Observability;
 
 const string LocalDevCorsPolicy = "LocalDevFrontend";
+var localDevOrigins = new[]
+{
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174"
+};
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,9 +32,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(LocalDevCorsPolicy, policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(localDevOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 builder.Services.AddTradingJwtAuthentication(builder.Configuration);
@@ -39,6 +48,8 @@ builder.Services.AddDbContext<MarketDbContext>(options =>
 builder.Services.AddScoped<IMarketDataStore>(sp => sp.GetRequiredService<MarketDbContext>());
 builder.Services.AddScoped<OrderValidationPolicy>();
 builder.Services.AddScoped<PriceTimeMatchingEngine>();
+builder.Services.AddScoped<GetCurrentAccountHandler>();
+builder.Services.AddScoped<ApplyTradeToAccountsHandler>();
 builder.Services.AddScoped<GetMarketsHandler>();
 builder.Services.AddScoped<GetOrderBookHandler>();
 builder.Services.AddScoped<ILifecycleEventPublisher, LifecycleEventPublisher>();
@@ -87,5 +98,10 @@ internal sealed class SignalRMarketHubPublisher : IMarketHubPublisher
         var tasks = userIds.Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(userId => _hubContext.Clients.Group(MarketHub.SettlementGroup(userId)).SendCoreAsync("SettlementUpdated", [payload], cancellationToken));
         return Task.WhenAll(tasks);
+    }
+
+    public Task PublishFundsUpdatedAsync(string userId, Trading.Contracts.Http.FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
+    {
+        return _hubContext.Clients.Group(MarketHub.FundsGroup(userId)).SendCoreAsync("FundsUpdated", [payload], cancellationToken);
     }
 }

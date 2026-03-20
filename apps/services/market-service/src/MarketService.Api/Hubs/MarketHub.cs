@@ -21,6 +21,7 @@ public sealed class MarketHub : Hub
         var userId = Context.User?.FindFirst("sub")?.Value ?? Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!string.IsNullOrWhiteSpace(userId))
         {
+            await Groups.AddToGroupAsync(Context.ConnectionId, FundsGroup(userId)).ConfigureAwait(false);
             await Groups.AddToGroupAsync(Context.ConnectionId, SettlementGroup(userId)).ConfigureAwait(false);
         }
 
@@ -29,5 +30,6 @@ public sealed class MarketHub : Hub
 
     public static string OrderBookGroup(string symbol) => $"market:{symbol.ToUpperInvariant()}:orderbook";
     public static string TradesGroup(string symbol) => $"market:{symbol.ToUpperInvariant()}:trades";
+    public static string FundsGroup(string userId) => $"user:{userId}:funds";
     public static string SettlementGroup(string userId) => $"user:{userId}:settlements";
 }

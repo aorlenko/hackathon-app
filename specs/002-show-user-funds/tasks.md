@@ -17,9 +17,9 @@
 
 **Purpose**: Establish the shared contracts and feature entry points needed by all user stories.
 
-- [ ] T001 Add account snapshot and funds realtime DTOs in `libs/contracts/http/src/Trading.Contracts.Http/Accounts.cs` and `libs/contracts/http/src/Trading.Contracts.Http/Realtime.cs`
-- [ ] T002 [P] Extend frontend account and realtime types in `apps/frontend-spa/src/contracts/trading.ts`
-- [ ] T003 [P] Create account feature scaffolding in `apps/frontend-spa/src/features/account/accountApi.ts`, `apps/frontend-spa/src/features/account/useAccountFunds.ts`, and `apps/frontend-spa/src/features/account/FundsPanel.tsx`
+- [x] T001 Add account snapshot and funds realtime DTOs in `libs/contracts/http/src/Trading.Contracts.Http/Accounts.cs` and `libs/contracts/http/src/Trading.Contracts.Http/Realtime.cs`
+- [x] T002 [P] Extend frontend account and realtime types in `apps/frontend-spa/src/contracts/trading.ts`
+- [x] T003 [P] Create account feature scaffolding in `apps/frontend-spa/src/features/account/accountApi.ts`, `apps/frontend-spa/src/features/account/useAccountFunds.ts`, and `apps/frontend-spa/src/features/account/FundsPanel.tsx`
 
 ---
 
@@ -29,12 +29,12 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T004 Create the account snapshot query handler in `apps/services/market-service/src/MarketService.Application/Accounts/GetCurrentAccountHandler.cs`
-- [ ] T005 Add the authenticated `GET /api/accounts/me` endpoint and shared account response mapping in `apps/services/market-service/src/MarketService.Api/Endpoints/AccountsEndpoints.cs`
-- [ ] T006 [P] Extend realtime publishing abstractions for user-scoped `FundsUpdated` messages in `apps/services/market-service/src/MarketService.Application/Realtime/MarketRealtimeNotifier.cs` and `libs/test-support/src/Trading.TestSupport/Realtime/CollectingMarketHubPublisher.cs`
-- [ ] T007 [P] Add account user-group membership and `FundsUpdated` hub plumbing in `apps/services/market-service/src/MarketService.Api/Hubs/MarketHub.cs`
-- [ ] T008 [P] Add snapshot refresh helpers in `apps/frontend-spa/src/features/account/accountApi.ts` and `apps/frontend-spa/src/features/auth/authApi.ts`
-- [ ] T009 [P] Expose account snapshot and funds realtime test helpers in `libs/test-support/src/Trading.TestSupport/TradingPlatformHarness.cs`
+- [x] T004 Create the account snapshot query handler in `apps/services/market-service/src/MarketService.Application/Accounts/GetCurrentAccountHandler.cs`
+- [x] T005 Add the authenticated `GET /api/accounts/me` endpoint and shared account response mapping in `apps/services/market-service/src/MarketService.Api/Endpoints/AccountsEndpoints.cs`
+- [x] T006 [P] Extend realtime publishing abstractions for user-scoped `FundsUpdated` messages in `apps/services/market-service/src/MarketService.Application/Realtime/MarketRealtimeNotifier.cs` and `libs/test-support/src/Trading.TestSupport/Realtime/CollectingMarketHubPublisher.cs`
+- [x] T007 [P] Add account user-group membership and `FundsUpdated` hub plumbing in `apps/services/market-service/src/MarketService.Api/Hubs/MarketHub.cs`
+- [x] T008 [P] Add snapshot refresh helpers in `apps/frontend-spa/src/features/account/accountApi.ts` and `apps/frontend-spa/src/features/auth/authApi.ts`
+- [x] T009 [P] Expose account snapshot and funds realtime test helpers in `libs/test-support/src/Trading.TestSupport/TradingPlatformHarness.cs`
 
 **Checkpoint**: Shared account snapshot and realtime infrastructure is ready for story work.
 
@@ -48,15 +48,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Add header funds visibility and initial loading state tests in `apps/frontend-spa/src/features/account/__tests__/fundsHeader.test.tsx`
-- [ ] T011 [P] [US1] Add contract coverage for `POST /api/accounts/me/bootstrap` and `GET /api/accounts/me` in `tests/contract/market-service/MarketService.ContractTests/MarketApiContractsTests.cs`
+- [x] T010 [P] [US1] Add header funds visibility and initial loading state tests in `apps/frontend-spa/src/features/account/__tests__/fundsHeader.test.tsx`
+- [x] T011 [P] [US1] Add contract coverage for `POST /api/accounts/me/bootstrap` and `GET /api/accounts/me` in `tests/contract/market-service/MarketService.ContractTests/MarketApiContractsTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Implement account snapshot fetching and formatting helpers in `apps/frontend-spa/src/features/account/accountApi.ts` and `apps/frontend-spa/src/features/account/useAccountFunds.ts`
-- [ ] T013 [P] [US1] Hydrate authenticated account funds state from login/bootstrap in `apps/frontend-spa/src/features/auth/AuthProvider.tsx`
-- [ ] T014 [US1] Render the funds summary inside the persistent authenticated header in `apps/frontend-spa/src/App.tsx` and `apps/frontend-spa/src/features/account/FundsPanel.tsx`
-- [ ] T015 [US1] Style the confirmed and loading funds display states in `apps/frontend-spa/src/styles.css`
+- [x] T012 [P] [US1] Implement account snapshot fetching and formatting helpers in `apps/frontend-spa/src/features/account/accountApi.ts` and `apps/frontend-spa/src/features/account/useAccountFunds.ts`
+- [x] T013 [P] [US1] Hydrate authenticated account funds state from login/bootstrap in `apps/frontend-spa/src/features/auth/AuthProvider.tsx`
+- [x] T014 [US1] Render the funds summary inside the persistent authenticated header in `apps/frontend-spa/src/App.tsx` and `apps/frontend-spa/src/features/account/FundsPanel.tsx`
+- [x] T015 [US1] Style the confirmed and loading funds display states in `apps/frontend-spa/src/styles.css`
 
 **Checkpoint**: User Story 1 is independently functional when funds are visible immediately after login across the authenticated shell.
 
@@ -70,17 +70,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Add buyer and seller funds projection unit tests in `tests/unit/market-service/MarketService.UnitTests/DemoAccountFundsProjectionTests.cs`
-- [ ] T017 [P] [US2] Add realtime contract coverage for the `FundsUpdated` envelope in `tests/contract/market-service/MarketService.ContractTests/MarketRealtimeContractsTests.cs`
-- [ ] T018 [P] [US2] Add realtime integration coverage for `FundsUpdated` publishing in `tests/integration/realtime/Realtime.IntegrationTests/LifecycleRealtimeRelayTests.cs`
-- [ ] T019 [P] [US2] Add SPA realtime funds update coverage in `apps/frontend-spa/src/features/realtime/__tests__/realtimeUpdates.test.tsx` and `apps/frontend-spa/src/features/account/__tests__/fundsHeader.test.tsx`
+- [x] T016 [P] [US2] Add buyer and seller funds projection unit tests in `tests/unit/market-service/MarketService.UnitTests/DemoAccountFundsProjectionTests.cs`
+- [x] T017 [P] [US2] Add realtime contract coverage for the `FundsUpdated` envelope in `tests/contract/market-service/MarketService.ContractTests/MarketRealtimeContractsTests.cs`
+- [x] T018 [P] [US2] Add realtime integration coverage for `FundsUpdated` publishing in `tests/integration/realtime/Realtime.IntegrationTests/LifecycleRealtimeRelayTests.cs`
+- [x] T019 [P] [US2] Add SPA realtime funds update coverage in `apps/frontend-spa/src/features/realtime/__tests__/realtimeUpdates.test.tsx` and `apps/frontend-spa/src/features/account/__tests__/fundsHeader.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Implement confirmed trade funds projection logic in `apps/services/market-service/src/MarketService.Application/Accounts/ApplyTradeToAccountsHandler.cs` and `apps/services/market-service/src/MarketService.Application/Abstractions/IMarketDataStore.cs`
-- [ ] T021 [US2] Apply buyer and seller account mutations when `TradeRecorded` is consumed in `apps/services/market-service/src/MarketService.Application/Consumers/TradeRecordedRelayConsumer.cs`
-- [ ] T022 [US2] Publish persisted account snapshots through user-scoped `FundsUpdated` messages in `apps/services/market-service/src/MarketService.Application/Realtime/MarketRealtimeNotifier.cs` and `apps/services/market-service/src/MarketService.Api/Hubs/MarketHub.cs`
-- [ ] T023 [US2] Update client account state from `FundsUpdated` events in `apps/frontend-spa/src/features/realtime/marketHubClient.ts` and `apps/frontend-spa/src/features/account/useAccountFunds.ts`
+- [x] T020 [P] [US2] Implement confirmed trade funds projection logic in `apps/services/market-service/src/MarketService.Application/Accounts/ApplyTradeToAccountsHandler.cs` and `apps/services/market-service/src/MarketService.Application/Abstractions/IMarketDataStore.cs`
+- [x] T021 [US2] Apply buyer and seller account mutations when `TradeRecorded` is consumed in `apps/services/market-service/src/MarketService.Application/Consumers/TradeRecordedRelayConsumer.cs`
+- [x] T022 [US2] Publish persisted account snapshots through user-scoped `FundsUpdated` messages in `apps/services/market-service/src/MarketService.Application/Realtime/MarketRealtimeNotifier.cs` and `apps/services/market-service/src/MarketService.Api/Hubs/MarketHub.cs`
+- [x] T023 [US2] Update client account state from `FundsUpdated` events in `apps/frontend-spa/src/features/realtime/marketHubClient.ts` and `apps/frontend-spa/src/features/account/useAccountFunds.ts`
 
 **Checkpoint**: User Story 2 is independently functional when confirmed trades update the visible funds automatically and non-effective trade attempts do not.
 
@@ -90,7 +90,7 @@
 
 **Purpose**: Keep final verification lightweight and focused on the demoable outcome.
 
-- [ ] T024 [P] Run and document the MVP verification flow in `specs/002-show-user-funds/quickstart.md`
+- [x] T024 [P] Run and document the MVP verification flow in `specs/002-show-user-funds/quickstart.md`
 
 ---
 

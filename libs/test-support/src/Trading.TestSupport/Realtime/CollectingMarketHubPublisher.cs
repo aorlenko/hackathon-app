@@ -7,6 +7,7 @@ public sealed class CollectingMarketHubPublisher : IMarketHubPublisher
 {
     public List<OrderBookDto> OrderBooks { get; } = [];
     public List<TradeRecordedRealtimeDto> Trades { get; } = [];
+    public List<(string UserId, FundsUpdatedRealtimeDto Payload)> FundsUpdates { get; } = [];
     public List<(string UserId, SettlementUpdatedRealtimeDto Payload)> Settlements { get; } = [];
 
     public Task PublishOrderBookAsync(string symbol, OrderBookDto payload, CancellationToken cancellationToken = default)
@@ -18,6 +19,12 @@ public sealed class CollectingMarketHubPublisher : IMarketHubPublisher
     public Task PublishTradeAsync(string symbol, TradeRecordedRealtimeDto payload, CancellationToken cancellationToken = default)
     {
         Trades.Add(payload);
+        return Task.CompletedTask;
+    }
+
+    public Task PublishFundsUpdatedAsync(string userId, FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
+    {
+        FundsUpdates.Add((userId, payload));
         return Task.CompletedTask;
     }
 

@@ -1,10 +1,19 @@
-import type { TradeRecord } from "../../contracts/trading";
+import { formatParticipantLabel } from "../account/useResolvedAccountIdentities";
+import type { AccountIdentity, TradeRecord } from "../../contracts/trading";
 
 interface RecentTradesPanelProps {
   trades: TradeRecord[];
+  identities: Map<string, AccountIdentity>;
+  currentUserId?: string | null;
+  currentUserEmail?: string | null;
 }
 
-export const RecentTradesPanel = ({ trades }: RecentTradesPanelProps) => {
+export const RecentTradesPanel = ({
+  trades,
+  identities,
+  currentUserId,
+  currentUserEmail,
+}: RecentTradesPanelProps) => {
   return (
     <section className="card">
       <div className="section-header">
@@ -30,8 +39,20 @@ export const RecentTradesPanel = ({ trades }: RecentTradesPanelProps) => {
                 <td>{new Date(trade.executedAtUtc).toLocaleString()}</td>
                 <td>{trade.price.toFixed(2)}</td>
                 <td>{trade.quantity}</td>
-                <td>{trade.buyerUserId}</td>
-                <td>{trade.sellerUserId}</td>
+                <td>
+                  {formatParticipantLabel(trade.buyerUserId, identities, {
+                    currentUserId,
+                    currentUserEmail,
+                    fallbackLabel: "Buyer",
+                  })}
+                </td>
+                <td>
+                  {formatParticipantLabel(trade.sellerUserId, identities, {
+                    currentUserId,
+                    currentUserEmail,
+                    fallbackLabel: "Seller",
+                  })}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -1,4 +1,5 @@
 using MarketService.Application.Abstractions;
+using MarketService.Application.Accounts;
 using MarketService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,7 +38,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
         {
             UserId = account.UserId,
             DisplayName = account.DisplayName,
-            Email = account.Email,
+            Email = MarketUserIdentityDefaults.NormalizeEmail(account.Email, account.UserId),
             CashAvailable = account.CashAvailable
         };
 
@@ -49,10 +50,39 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
         return result;
     }
 
+    public async Task<IReadOnlyList<DemoAccount>> GetAccountsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken = default)
+    {
+        var normalizedUserIds = userIds
+            .Where(userId => !string.IsNullOrWhiteSpace(userId))
+            .Select(userId => userId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (normalizedUserIds.Count == 0)
+        {
+            return [];
+        }
+
+        var accounts = await Accounts
+            .Where(account => normalizedUserIds.Contains(account.UserId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return accounts
+            .Select(account => new DemoAccount
+            {
+                UserId = account.UserId,
+                DisplayName = account.DisplayName,
+                Email = MarketUserIdentityDefaults.NormalizeEmail(account.Email, account.UserId),
+                CashAvailable = account.CashAvailable
+            })
+            .ToList();
+    }
+
     public async Task<DemoAccount> EnsureDemoAccountAsync(string userId, string? displayName, string? email, CancellationToken cancellationToken = default)
     {
-        var normalizedDisplayName = string.IsNullOrWhiteSpace(displayName) ? userId : displayName.Trim();
-        var normalizedEmail = email?.Trim() ?? string.Empty;
+        var normalizedDisplayName = MarketUserIdentityDefaults.NormalizeDisplayName(displayName, userId);
+        var normalizedEmail = MarketUserIdentityDefaults.NormalizeEmail(email, userId);
 
         var existing = await Accounts
             .Include(x => x.Holdings)
@@ -103,6 +133,78 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
 
         return await GetAccountAsync(userId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Could not provision demo account for {userId}.");
+    }
+
+    public async Task SaveAccountsAsync(IEnumerable<DemoAccount> accounts, CancellationToken cancellationToken = default)
+    {
+        var accountList = accounts
+            .Where(account => !string.IsNullOrWhiteSpace(account.UserId))
+            .GroupBy(account => account.UserId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .ToList();
+
+        if (accountList.Count == 0)
+        {
+            return;
+        }
+
+        var userIds = accountList.Select(account => account.UserId).ToList();
+        var persistedAccounts = await Accounts
+            .Include(account => account.Holdings)
+            .Where(account => userIds.Contains(account.UserId))
+            .ToDictionaryAsync(account => account.UserId, StringComparer.OrdinalIgnoreCase, cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var account in accountList)
+        {
+            if (!persistedAccounts.TryGetValue(account.UserId, out var persistedAccount))
+            {
+                throw new InvalidOperationException($"Could not load demo account for {account.UserId}.");
+            }
+
+            persistedAccount.DisplayName = account.DisplayName;
+            persistedAccount.Email = MarketUserIdentityDefaults.NormalizeEmail(account.Email, account.UserId);
+            persistedAccount.CashAvailable = account.CashAvailable;
+
+            var incomingHoldings = account.Holdings
+                .Where(holding => holding.Value > 0)
+                .ToDictionary(
+                    holding => holding.Key.ToUpperInvariant(),
+                    holding => holding.Value,
+                    StringComparer.OrdinalIgnoreCase);
+
+            foreach (var existingHolding in persistedAccount.Holdings.ToList())
+            {
+                if (incomingHoldings.TryGetValue(existingHolding.Symbol, out var quantity))
+                {
+                    existingHolding.Quantity = quantity;
+                    continue;
+                }
+
+                Holdings.Remove(existingHolding);
+            }
+
+            var existingSymbols = persistedAccount.Holdings
+                .Select(holding => holding.Symbol)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var holding in incomingHoldings)
+            {
+                if (existingSymbols.Contains(holding.Key))
+                {
+                    continue;
+                }
+
+                persistedAccount.Holdings.Add(new DemoHoldingRecord
+                {
+                    UserId = persistedAccount.UserId,
+                    Symbol = holding.Key,
+                    Quantity = holding.Value
+                });
+            }
+        }
+
+        await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public Task<Item?> GetItemBySymbolAsync(string symbol, CancellationToken cancellationToken = default)

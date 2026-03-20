@@ -8,6 +8,7 @@ public interface IMarketHubPublisher
     Task PublishOrderBookAsync(string symbol, OrderBookDto payload, CancellationToken cancellationToken = default);
     Task PublishTradeAsync(string symbol, TradeRecordedRealtimeDto payload, CancellationToken cancellationToken = default);
     Task PublishSettlementAsync(IEnumerable<string> userIds, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
+    Task PublishFundsUpdatedAsync(string userId, FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
 }
 
 public interface IMarketRealtimeNotifier
@@ -15,6 +16,7 @@ public interface IMarketRealtimeNotifier
     Task NotifyOrderBookUpdatedAsync(string symbol, CancellationToken cancellationToken = default);
     Task NotifyTradeRecordedAsync(TradeRecorded @event, CancellationToken cancellationToken = default);
     Task NotifySettlementUpdatedAsync(string buyerUserId, string sellerUserId, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
+    Task NotifyFundsUpdatedAsync(FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
 }
 
 public sealed class MarketRealtimeNotifier : IMarketRealtimeNotifier
@@ -36,12 +38,24 @@ public sealed class MarketRealtimeNotifier : IMarketRealtimeNotifier
 
     public Task NotifyTradeRecordedAsync(TradeRecorded @event, CancellationToken cancellationToken = default)
     {
-        var payload = new TradeRecordedRealtimeDto(@event.TradeId, @event.Symbol, @event.Price, @event.Quantity, @event.ExecutedAtUtc);
+        var payload = new TradeRecordedRealtimeDto(
+            @event.TradeId,
+            @event.Symbol,
+            @event.Price,
+            @event.Quantity,
+            @event.ExecutedAtUtc,
+            @event.BuyerUserId,
+            @event.SellerUserId);
         return _publisher.PublishTradeAsync(@event.Symbol, payload, cancellationToken);
     }
 
     public Task NotifySettlementUpdatedAsync(string buyerUserId, string sellerUserId, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
     {
         return _publisher.PublishSettlementAsync([buyerUserId, sellerUserId], payload, cancellationToken);
+    }
+
+    public Task NotifyFundsUpdatedAsync(FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
+    {
+        return _publisher.PublishFundsUpdatedAsync(payload.UserId, payload, cancellationToken);
     }
 }

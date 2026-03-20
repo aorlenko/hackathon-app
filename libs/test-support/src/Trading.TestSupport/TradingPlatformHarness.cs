@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MarketService.Application.Accounts;
 using MarketService.Application.Abstractions;
 using MarketService.Application.Consumers;
 using MarketService.Application.Matching;
@@ -36,6 +37,7 @@ public sealed class TradingPlatformHarness
 
     public GetMarketsHandler GetMarkets { get; }
     public GetOrderBookHandler GetOrderBook { get; }
+    public GetCurrentAccountHandler GetCurrentAccount { get; }
     public PlaceOrderHandler PlaceOrder { get; }
     public GetRecentTradesQuery GetRecentTrades { get; }
     public GetUserTradesQuery GetUserTrades { get; }
@@ -62,8 +64,10 @@ public sealed class TradingPlatformHarness
 
         GetMarkets = new GetMarketsHandler(MarketStore);
         GetOrderBook = new GetOrderBookHandler(MarketStore);
+        GetCurrentAccount = new GetCurrentAccountHandler(MarketStore);
+        var applyTradeToAccounts = new ApplyTradeToAccountsHandler(MarketStore);
         var realtimeNotifier = new MarketRealtimeNotifier(GetOrderBook, RealtimePublisher);
-        PlaceOrder = new PlaceOrderHandler(MarketStore, new OrderValidationPolicy(), new PriceTimeMatchingEngine(), marketPublisher, realtimeNotifier);
+        PlaceOrder = new PlaceOrderHandler(MarketStore, new OrderValidationPolicy(), new PriceTimeMatchingEngine(), marketPublisher, applyTradeToAccounts, realtimeNotifier);
 
         var orderMatchedConsumer = new OrderMatchedConsumer(TradeStore, tradePublisher);
         var tradeRelayConsumer = new TradeRecordedRelayConsumer(realtimeNotifier);
@@ -88,6 +92,11 @@ public sealed class TradingPlatformHarness
     public Task<PlaceOrderOutcome> PlaceOrderAsync(string userId, PlaceOrderRequest request, CancellationToken cancellationToken = default)
     {
         return PlaceOrder.HandleAsync(userId, request, cancellationToken);
+    }
+
+    public Task<AccountSnapshotDto?> GetCurrentAccountSnapshotAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return GetCurrentAccount.HandleAsync(userId, cancellationToken);
     }
 
     public static ClaimsPrincipal CreatePrincipal(string userId, string? displayName = null, string? email = null)

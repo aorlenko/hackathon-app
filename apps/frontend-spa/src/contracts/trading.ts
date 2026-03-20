@@ -54,6 +54,10 @@ export interface BootstrapDemoAccountRequest {
   email?: string;
 }
 
+export interface ResolveAccountsRequest {
+  userIds: string[];
+}
+
 export interface DemoAccount {
   userId: string;
   displayName: string;
@@ -61,6 +65,26 @@ export interface DemoAccount {
   cashAvailable: number;
   holdings: DemoHolding[];
 }
+
+export interface AccountIdentity {
+  userId: string;
+  displayName: string;
+  email: string;
+}
+
+export interface AccountSnapshot {
+  userId: string;
+  displayName: string;
+  email: string;
+  cashAvailable: number;
+  holdings: DemoHolding[];
+}
+
+export type FundsDisplayState =
+  | "loading"
+  | "confirmed"
+  | "updating"
+  | "unavailable";
 
 export interface TradeRecord {
   tradeId: string;
@@ -86,8 +110,15 @@ export interface RealtimeEnvelope<TPayload> {
   payload: TPayload;
 }
 
+export interface FundsUpdatedPayload {
+  userId: string;
+  cashAvailable: number;
+  changedAtUtc: string;
+}
+
 export type OrderBookUpdatedMessage = RealtimeEnvelope<OrderBookSnapshot>;
 export type TradeRecordedMessage = RealtimeEnvelope<TradeRecord>;
+export type FundsUpdatedMessage = RealtimeEnvelope<FundsUpdatedPayload>;
 export type SettlementUpdatedMessage = RealtimeEnvelope<
   SettlementRecord & {
     symbol?: string;

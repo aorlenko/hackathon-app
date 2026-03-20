@@ -1,4 +1,5 @@
 using MarketService.Application.Abstractions;
+using MarketService.Application.Accounts;
 using MarketService.Application.Matching;
 using MarketService.Application.Realtime;
 using MarketService.Domain.Entities;
@@ -17,6 +18,7 @@ public sealed class PlaceOrderHandler
     private readonly OrderValidationPolicy _validationPolicy;
     private readonly PriceTimeMatchingEngine _matchingEngine;
     private readonly ILifecycleEventPublisher _publisher;
+    private readonly ApplyTradeToAccountsHandler _applyTradeToAccounts;
     private readonly IMarketRealtimeNotifier _realtimeNotifier;
 
     public PlaceOrderHandler(
@@ -24,12 +26,14 @@ public sealed class PlaceOrderHandler
         OrderValidationPolicy validationPolicy,
         PriceTimeMatchingEngine matchingEngine,
         ILifecycleEventPublisher publisher,
+        ApplyTradeToAccountsHandler applyTradeToAccounts,
         IMarketRealtimeNotifier realtimeNotifier)
     {
         _store = store;
         _validationPolicy = validationPolicy;
         _matchingEngine = matchingEngine;
         _publisher = publisher;
+        _applyTradeToAccounts = applyTradeToAccounts;
         _realtimeNotifier = realtimeNotifier;
     }
 
@@ -89,7 +93,13 @@ public sealed class PlaceOrderHandler
 
         foreach (var matched in matchedEvents)
         {
+            var fundsUpdates = await _applyTradeToAccounts.HandleAsync(matched, cancellationToken).ConfigureAwait(false);
             await _publisher.PublishAsync(matched, cancellationToken).ConfigureAwait(false);
+
+            foreach (var update in fundsUpdates)
+            {
+                await _realtimeNotifier.NotifyFundsUpdatedAsync(update, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         await _realtimeNotifier.NotifyOrderBookUpdatedAsync(order.Symbol, cancellationToken).ConfigureAwait(false);

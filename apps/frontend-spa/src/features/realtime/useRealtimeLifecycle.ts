@@ -53,7 +53,7 @@ export interface RealtimeLifecycleOptions {
   initialOrderBook: OrderBookSnapshot | null;
   initialTrades: TradeRecord[];
   initialSettlements: SettlementRecord[];
-  client: MarketHubClient;
+  client: MarketHubClient | null;
   refreshSnapshots?: () => Promise<{
     orderBook: OrderBookSnapshot | null;
     trades: TradeRecord[];
@@ -92,7 +92,14 @@ export const useRealtimeLifecycle = ({
   }, [initialSettlements]);
 
   useEffect(() => {
+    if (!client) {
+      setConnectionState("connecting");
+      return;
+    }
+
     let active = true;
+    let started = false;
+    let joined = false;
 
     const orderBookUnsubscribe = client.onOrderBookUpdated((message) => {
       if (active) {
@@ -136,11 +143,21 @@ export const useRealtimeLifecycle = ({
       try {
         setConnectionState("connecting");
         await client.start();
+        started = true;
+        if (!active) {
+          await client.stop();
+          return;
+        }
         await client.joinMarket(symbol);
+        joined = true;
+        if (!active) {
+          await client.leaveMarket(symbol).finally(() => client.stop());
+          return;
+        }
         if (active) {
           setConnectionState("connected");
         }
-      } catch {
+      } catch (error) {
         if (active) {
           setConnectionState("offline");
         }
@@ -155,7 +172,14 @@ export const useRealtimeLifecycle = ({
       tradeUnsubscribe();
       settlementUnsubscribe();
       reconnectUnsubscribe();
-      void client.leaveMarket(symbol).finally(() => client.stop());
+      if (joined) {
+        void client.leaveMarket(symbol).finally(() => client.stop());
+        return;
+      }
+
+      if (started) {
+        void client.stop();
+      }
     };
   }, [client, refreshSnapshots, symbol]);
 

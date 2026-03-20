@@ -6,11 +6,11 @@ import { App } from "./App";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+  <React.Fragment>
     <BrowserRouter>
       <TradingAuthProvider>
         <App />
       </TradingAuthProvider>
     </BrowserRouter>
-  </React.StrictMode>,
+  </React.Fragment>,
 );

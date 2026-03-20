@@ -47,3 +47,10 @@ Focus the new or updated coverage on:
 - Timed login scenario proving funds appear within the 2-second budget for successful auth flows.
 - Timed trade scenario proving confirmed trade-driven updates appear within the 1-second budget.
 - Evidence that any delay beyond 5 seconds produces an updating or unavailable state rather than silently presenting stale data as current.
+
+## Verification Log
+
+- 2026-03-19: `npm --prefix apps/frontend-spa run lint` passed.
+- 2026-03-19: `npm --prefix apps/frontend-spa run test` passed.
+- 2026-03-19: `dotnet test apps/services/TradingPlatform.sln --nologo` passed.
+- Manual verification steps remain the same as the checklist above and should be exercised against the running local demo stack when an interactive environment is available.

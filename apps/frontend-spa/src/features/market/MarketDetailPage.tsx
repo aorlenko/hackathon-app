@@ -7,6 +7,8 @@ import type {
   TradeRecord,
 } from "../../contracts/trading";
 import { useTradingAuth } from "../auth/AuthProvider";
+import { useResolvedAccountIdentities } from "../account/useResolvedAccountIdentities";
+import { ACCOUNT_FUNDS_REFRESH_EVENT } from "../account/useAccountFunds";
 import { getUserSettlementHistory } from "../history/settlementHistoryApi";
 import { createMarketHubClient } from "../realtime/marketHubClient";
 import { useRealtimeLifecycle } from "../realtime/useRealtimeLifecycle";
@@ -69,7 +71,10 @@ export const MarketDetailPage = () => {
   }, [loadSnapshots]);
 
   const realtimeClient = useMemo(
-    () => createMarketHubClient(async () => auth.accessToken),
+    () =>
+      auth.accessToken
+        ? createMarketHubClient(async () => auth.accessToken)
+        : null,
     [auth.accessToken],
   );
 
@@ -81,6 +86,15 @@ export const MarketDetailPage = () => {
     client: realtimeClient,
     refreshSnapshots: loadSnapshots,
   });
+  const participantUserIds = useMemo(
+    () =>
+      realtime.trades.flatMap((trade) => [trade.buyerUserId, trade.sellerUserId]),
+    [realtime.trades],
+  );
+  const participantIdentities = useResolvedAccountIdentities(
+    participantUserIds,
+    auth.accessToken,
+  );
 
   const handleSubmitOrder = (input: Omit<PlaceOrderRequest, "itemSymbol">) =>
     placeOrder(
@@ -94,6 +108,7 @@ export const MarketDetailPage = () => {
       setOrderBook(snapshot.orderBook);
       setTrades(snapshot.trades);
       setSettlements(snapshot.settlements);
+      window.dispatchEvent(new Event(ACCOUNT_FUNDS_REFRESH_EVENT));
       return response;
     });
 
@@ -107,8 +122,13 @@ export const MarketDetailPage = () => {
               Track the full order to settlement lifecycle for {symbol}.
             </p>
           </div>
-          <span className="status-pill">{realtime.connectionState}</span>
         </div>
+        {realtime.connectionState !== "connected" ? (
+          <p className="muted small inline-feedback">
+            Live updates are currently unavailable. Data will continue refreshing
+            after order actions and page reloads.
+          </p>
+        ) : null}
       </section>
 
       {loading ? <section className="card">Loading market...</section> : null}
@@ -128,7 +148,12 @@ export const MarketDetailPage = () => {
             />
           </div>
           <div className="dashboard-grid">
-            <RecentTradesPanel trades={realtime.trades} />
+            <RecentTradesPanel
+              trades={realtime.trades}
+              identities={participantIdentities}
+              currentUserId={auth.userId}
+              currentUserEmail={auth.accountSnapshot?.email}
+            />
             <SettlementStatusPanel settlements={realtime.settlements} />
           </div>
         </>

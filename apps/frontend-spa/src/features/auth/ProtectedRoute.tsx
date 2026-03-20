@@ -1,9 +1,8 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { useTradingAuth } from "./AuthProvider";
 
 export const ProtectedRoute = () => {
   const auth = useTradingAuth();
-  const location = useLocation();
 
   if (auth.isLoading) {
     return (
@@ -25,9 +24,6 @@ export const ProtectedRoute = () => {
         <button className="primary-button" onClick={() => void auth.login()}>
           {auth.mode === "auth0" ? "Continue with Auth0" : "Use demo sign-in"}
         </button>
-        <p className="muted">
-          Requested path: <code>{location.pathname}</code>
-        </p>
       </section>
     );
   }

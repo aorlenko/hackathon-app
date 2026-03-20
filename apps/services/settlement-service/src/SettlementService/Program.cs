@@ -12,6 +12,13 @@ using Trading.Messaging;
 using Trading.Observability;
 
 const string LocalDevCorsPolicy = "LocalDevFrontend";
+var localDevOrigins = new[]
+{
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174"
+};
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,9 +27,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(LocalDevCorsPolicy, policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(localDevOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 builder.Services.AddTradingJwtAuthentication(builder.Configuration);

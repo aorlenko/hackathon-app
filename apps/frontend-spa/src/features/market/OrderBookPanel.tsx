@@ -41,13 +41,12 @@ const OrderBookTable = ({
 
 export const OrderBookPanel = ({
   orderBook,
-  connectionState,
+  connectionState: _connectionState,
 }: OrderBookPanelProps) => {
   return (
     <section className="card">
       <div className="section-header">
         <h2>Order book</h2>
-        <span className="status-pill">{connectionState}</span>
       </div>
       {orderBook ? (
         <>

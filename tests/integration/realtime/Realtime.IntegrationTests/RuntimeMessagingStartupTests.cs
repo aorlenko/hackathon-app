@@ -3,6 +3,7 @@ using MarketService.Application.Abstractions;
 using MarketService.Application.Realtime;
 using MarketService.Host;
 using MarketService.Infrastructure.Persistence;
+using MarketService.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -112,6 +113,11 @@ public sealed class RuntimeMessagingStartupTests
             });
 
         using var client = factory.CreateClient();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<MarketDbContext>();
+            await SeedDataRunner.SeedAsync(store);
+        }
         var trade = CreateTradeRecorded();
         var settlement = new SettlementCompleted(
             Guid.NewGuid(),
@@ -133,6 +139,8 @@ public sealed class RuntimeMessagingStartupTests
         Assert.Single(fakePublisher.Trades);
         Assert.Single(fakePublisher.Settlements);
         Assert.Equal(trade.Symbol, fakePublisher.Trades[0].Symbol);
+        Assert.Equal(trade.BuyerUserId, fakePublisher.Trades[0].Payload.BuyerUserId);
+        Assert.Equal(trade.SellerUserId, fakePublisher.Trades[0].Payload.SellerUserId);
         Assert.Contains(trade.BuyerUserId, fakePublisher.Settlements[0].UserIds);
         Assert.Contains(trade.SellerUserId, fakePublisher.Settlements[0].UserIds);
     }
@@ -202,6 +210,8 @@ public sealed class RuntimeMessagingStartupTests
             Trades.Add((symbol, payload));
             return Task.CompletedTask;
         }
+
+        public Task PublishFundsUpdatedAsync(string userId, FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task PublishSettlementAsync(IEnumerable<string> userIds, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
         {

@@ -1,6 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTradingAuth } from "../auth/AuthProvider";
 import type { TradeRecord } from "../../contracts/trading";
+import {
+  formatParticipantLabel,
+  useResolvedAccountIdentities,
+} from "../account/useResolvedAccountIdentities";
 import { getUserTradeHistory } from "./tradeHistoryApi";
 
 export const TradeHistoryPage = () => {
@@ -8,6 +12,14 @@ export const TradeHistoryPage = () => {
   const [trades, setTrades] = useState<TradeRecord[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const participantUserIds = useMemo(
+    () => trades.flatMap((trade) => [trade.buyerUserId, trade.sellerUserId]),
+    [trades],
+  );
+  const participantIdentities = useResolvedAccountIdentities(
+    participantUserIds,
+    auth.accessToken,
+  );
 
   useEffect(() => {
     if (!auth.userId) {
@@ -49,21 +61,43 @@ export const TradeHistoryPage = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Trade</th>
+                <th>Executed</th>
                 <th>Symbol</th>
                 <th>Price</th>
                 <th>Quantity</th>
-                <th>Executed</th>
+                <th>Buyer</th>
+                <th>Seller</th>
               </tr>
             </thead>
             <tbody>
               {trades.map((trade) => (
                 <tr key={trade.tradeId}>
-                  <td>{trade.tradeId}</td>
+                  <td>{new Date(trade.executedAtUtc).toLocaleString()}</td>
                   <td>{trade.symbol}</td>
                   <td>{trade.price.toFixed(2)}</td>
                   <td>{trade.quantity}</td>
-                  <td>{new Date(trade.executedAtUtc).toLocaleString()}</td>
+                  <td>
+                    {formatParticipantLabel(
+                      trade.buyerUserId,
+                      participantIdentities,
+                      {
+                        currentUserId: auth.userId,
+                        currentUserEmail: auth.accountSnapshot?.email,
+                        fallbackLabel: "Buyer",
+                      },
+                    )}
+                  </td>
+                  <td>
+                    {formatParticipantLabel(
+                      trade.sellerUserId,
+                      participantIdentities,
+                      {
+                        currentUserId: auth.userId,
+                        currentUserEmail: auth.accountSnapshot?.email,
+                        fallbackLabel: "Seller",
+                      },
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

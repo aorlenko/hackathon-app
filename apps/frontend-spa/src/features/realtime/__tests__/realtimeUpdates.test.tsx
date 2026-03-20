@@ -1,10 +1,12 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import type {
+  FundsUpdatedMessage,
   OrderBookUpdatedMessage,
   SettlementUpdatedMessage,
   TradeRecordedMessage,
 } from "../../../contracts/trading";
+import { useAccountFunds } from "../../account/useAccountFunds";
 import type { MarketHubClient } from "../marketHubClient";
 import { useRealtimeLifecycle } from "../useRealtimeLifecycle";
 
@@ -30,6 +32,7 @@ const EMPTY_SETTLEMENTS: Array<{
 class FakeMarketHubClient implements MarketHubClient {
   private orderBookHandlers = new Set<(message: OrderBookUpdatedMessage) => void>();
   private tradeHandlers = new Set<(message: TradeRecordedMessage) => void>();
+  private fundsHandlers = new Set<(message: FundsUpdatedMessage) => void>();
   private settlementHandlers = new Set<
     (message: SettlementUpdatedMessage) => void
   >();
@@ -61,6 +64,11 @@ class FakeMarketHubClient implements MarketHubClient {
     return () => this.tradeHandlers.delete(handler);
   }
 
+  onFundsUpdated(handler: (message: FundsUpdatedMessage) => void) {
+    this.fundsHandlers.add(handler);
+    return () => this.fundsHandlers.delete(handler);
+  }
+
   onSettlementUpdated(handler: (message: SettlementUpdatedMessage) => void) {
     this.settlementHandlers.add(handler);
     return () => this.settlementHandlers.delete(handler);
@@ -77,6 +85,10 @@ class FakeMarketHubClient implements MarketHubClient {
 
   emitTrade(message: TradeRecordedMessage) {
     this.tradeHandlers.forEach((handler) => handler(message));
+  }
+
+  emitFunds(message: FundsUpdatedMessage) {
+    this.fundsHandlers.forEach((handler) => handler(message));
   }
 
   emitSettlement(message: SettlementUpdatedMessage) {
@@ -165,6 +177,29 @@ const TestHarness = ({
       </div>
       <div data-testid="trades-count">{realtime.trades.length}</div>
       <div data-testid="settlements-count">{realtime.settlements.length}</div>
+    </div>
+  );
+};
+
+const FundsHarness = ({ client }: { client: MarketHubClient }) => {
+  const funds = useAccountFunds({
+    accessToken: "token",
+    client,
+    initialSnapshot: {
+      userId: "user-1",
+      displayName: "Buyer One",
+      email: "user1@example.com",
+      cashAvailable: 250000,
+      holdings: [{ symbol: "ABC", quantity: 10 }],
+    },
+    isAuthenticated: true,
+    userId: "user-1",
+  });
+
+  return (
+    <div>
+      <div data-testid="funds-amount">{funds.formattedFunds}</div>
+      <div data-testid="funds-state">{funds.state}</div>
     </div>
   );
 };
@@ -358,5 +393,31 @@ describe("useRealtimeLifecycle", () => {
     await waitFor(() =>
       expect(screen.getByTestId("orderbook-quantity")).toHaveTextContent("9"),
     );
+  });
+
+  it("updates confirmed account funds from FundsUpdated realtime events", async () => {
+    const client = new FakeMarketHubClient();
+
+    render(<FundsHarness client={client} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("funds-amount")).toHaveTextContent(
+        "$250,000.00",
+      ),
+    );
+
+    await act(async () => {
+      client.emitFunds({
+        version: 1,
+        payload: {
+          userId: "user-1",
+          cashAvailable: 249700,
+          changedAtUtc: "2026-03-19T15:30:00Z",
+        },
+      });
+    });
+
+    expect(screen.getByTestId("funds-amount")).toHaveTextContent("$249,700.00");
+    expect(screen.getByTestId("funds-state")).toHaveTextContent("confirmed");
   });
 });

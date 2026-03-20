@@ -13,10 +13,15 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
+import type { AccountSnapshot } from "../../contracts/trading";
 import { env, hasAuth0Config } from "../../config/env";
 import { bootstrapDemoAccount } from "./authApi";
 
 const DEMO_USER_STORAGE_KEY = "trading.demo-user-id";
+const DEMO_ACCOUNT_BOOTSTRAP = {
+  displayName: "Demo Trader",
+  email: "demo-trader@example.com",
+};
 
 export interface TradingAuthState {
   isAuthenticated: boolean;
@@ -24,12 +29,15 @@ export interface TradingAuthState {
   userId: string | null;
   displayName: string;
   accessToken?: string;
+  accountSnapshot: AccountSnapshot | null;
   mode: "auth0" | "demo";
   login: () => Promise<void>;
   logout: () => void;
 }
 
-const TradingAuthContext = createContext<TradingAuthState | undefined>(undefined);
+export const TradingAuthContext = createContext<TradingAuthState | undefined>(
+  undefined,
+);
 
 const pickFriendlyDisplayName = (user: ReturnType<typeof useAuth0>["user"]) =>
   user?.name ??
@@ -41,6 +49,10 @@ const pickFriendlyDisplayName = (user: ReturnType<typeof useAuth0>["user"]) =>
 const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
   const auth0 = useAuth0();
   const [accessToken, setAccessToken] = useState<string>();
+  const [isResolvingAccessToken, setIsResolvingAccessToken] = useState(false);
+  const [accountSnapshot, setAccountSnapshot] = useState<AccountSnapshot | null>(
+    null,
+  );
   const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
   const [bootstrappedUserId, setBootstrappedUserId] = useState<string | null>(
     null,
@@ -71,12 +83,15 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     if (!auth0.isAuthenticated) {
       setAccessToken(undefined);
+      setIsResolvingAccessToken(false);
+      setAccountSnapshot(null);
       setBootstrappedUserId(null);
       setIsBootstrappingAccount(false);
       return;
     }
 
     let active = true;
+    setIsResolvingAccessToken(true);
 
     void auth0
       .getAccessTokenSilently({
@@ -87,11 +102,13 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
       .then((token) => {
         if (active) {
           setAccessToken(token);
+          setIsResolvingAccessToken(false);
         }
       })
       .catch(() => {
         if (active) {
           setAccessToken(undefined);
+          setIsResolvingAccessToken(false);
         }
       });
 
@@ -105,6 +122,7 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
     if (!auth0.isAuthenticated || !accessToken || !userId) {
       setIsBootstrappingAccount(false);
       if (!auth0.isAuthenticated) {
+        setAccountSnapshot(null);
         setBootstrappedUserId(null);
       }
       return;
@@ -115,6 +133,9 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
     }
 
     let active = true;
+    setAccountSnapshot((current) =>
+      current?.userId === userId ? current : null,
+    );
     setIsBootstrappingAccount(true);
 
     void bootstrapDemoAccount(
@@ -124,8 +145,9 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
       },
       accessToken,
     )
-      .then(() => {
+      .then((snapshot) => {
         if (active) {
+          setAccountSnapshot(snapshot);
           setBootstrappedUserId(userId);
         }
       })
@@ -153,10 +175,12 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
   const value = useMemo<TradingAuthState>(
     () => ({
       isAuthenticated: auth0.isAuthenticated,
-      isLoading: auth0.isLoading || isBootstrappingAccount,
+      isLoading:
+        auth0.isLoading || isResolvingAccessToken || isBootstrappingAccount,
       userId: auth0.user?.sub ?? null,
       displayName: pickFriendlyDisplayName(auth0.user),
       accessToken,
+      accountSnapshot,
       mode: "auth0",
       login,
       logout,
@@ -168,7 +192,9 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
       auth0.user?.name,
       auth0.user?.sub,
       accessToken,
+      accountSnapshot,
       isBootstrappingAccount,
+      isResolvingAccessToken,
       login,
       logout,
     ],
@@ -190,6 +216,13 @@ const DemoAuthProvider = ({ children }: PropsWithChildren) => {
     const storedUserId = window.localStorage.getItem(DEMO_USER_STORAGE_KEY);
     return storedUserId === "demo-user" ? "user-1" : storedUserId;
   });
+  const [accountSnapshot, setAccountSnapshot] = useState<AccountSnapshot | null>(
+    null,
+  );
+  const [bootstrappedUserId, setBootstrappedUserId] = useState<string | null>(
+    null,
+  );
+  const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
 
   const login = useCallback(async () => {
     const nextUserId = "user-1";
@@ -199,21 +232,62 @@ const DemoAuthProvider = ({ children }: PropsWithChildren) => {
 
   const logout = useCallback(() => {
     window.localStorage.removeItem(DEMO_USER_STORAGE_KEY);
+    setAccountSnapshot(null);
+    setBootstrappedUserId(null);
+    setIsBootstrappingAccount(false);
     setUserId(null);
   }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      setAccountSnapshot(null);
+      setBootstrappedUserId(null);
+      setIsBootstrappingAccount(false);
+      return;
+    }
+
+    if (bootstrappedUserId === userId) {
+      return;
+    }
+
+    let active = true;
+    setAccountSnapshot((current) => (current?.userId === userId ? current : null));
+    setIsBootstrappingAccount(true);
+
+    void bootstrapDemoAccount(DEMO_ACCOUNT_BOOTSTRAP, userId)
+      .then((snapshot) => {
+        if (active) {
+          setAccountSnapshot(snapshot);
+          setBootstrappedUserId(userId);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to bootstrap demo trading account.", error);
+      })
+      .finally(() => {
+        if (active) {
+          setIsBootstrappingAccount(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [bootstrappedUserId, userId]);
 
   const value = useMemo<TradingAuthState>(
     () => ({
       isAuthenticated: Boolean(userId),
-      isLoading: false,
+      isLoading: isBootstrappingAccount,
       userId,
       displayName: userId ? "Demo Trader" : "Guest",
       accessToken: userId ?? undefined,
+      accountSnapshot,
       mode: "demo",
       login,
       logout,
     }),
-    [login, logout, userId],
+    [accountSnapshot, isBootstrappingAccount, login, logout, userId],
   );
 
   return (
@@ -229,6 +303,7 @@ export const TradingAuthProvider = ({ children }: PropsWithChildren) => {
       <Auth0Provider
         domain={env.auth0Domain}
         clientId={env.auth0ClientId}
+        cacheLocation="localstorage"
         authorizationParams={{
           audience: env.auth0Audience || undefined,
           redirect_uri: window.location.origin,
@@ -249,6 +324,7 @@ export const TradingAuthProvider = ({ children }: PropsWithChildren) => {
           userId: null,
           displayName: "Guest",
           accessToken: undefined,
+          accountSnapshot: null,
           mode: "demo",
           login: async () => undefined,
           logout: () => undefined,

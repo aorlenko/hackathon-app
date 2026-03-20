@@ -86,4 +86,27 @@ public sealed class MarketApiContractsTests
         Assert.Equal("Bootstrap Trader", account.DisplayName);
         Assert.Equal("bootstrap@example.com", account.Email);
     }
+
+    [Fact]
+    public async Task Get_accounts_me_returns_current_account_snapshot_shape()
+    {
+        var harness = new TradingPlatformHarness();
+        var httpContext = new DefaultHttpContext
+        {
+            User = TradingPlatformHarness.CreatePrincipal("user-1", "Buyer One", "user1@example.com")
+        };
+
+        var result = await AccountsEndpoints.GetCurrentAccount(
+            httpContext,
+            harness.GetCurrentAccount,
+            CancellationToken.None);
+
+        var ok = Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.Ok<AccountSnapshotDto>>(result);
+        Assert.NotNull(ok.Value);
+        Assert.Equal("user-1", ok.Value!.UserId);
+        Assert.Equal("Buyer One", ok.Value.DisplayName);
+        Assert.Equal("user1@example.com", ok.Value.Email);
+        Assert.True(ok.Value.CashAvailable > 0);
+        Assert.Contains(ok.Value.Holdings, holding => holding.Symbol == "ABC");
+    }
 }

@@ -6,6 +6,8 @@ import {
 } from "@microsoft/signalr";
 import { env } from "../../config/env";
 import type {
+  FundsUpdatedMessage,
+  FundsUpdatedPayload,
   OrderBookSnapshot,
   OrderBookUpdatedMessage,
   RealtimeEnvelope,
@@ -22,6 +24,7 @@ export interface MarketHubClient {
   leaveMarket(symbol: string): Promise<void>;
   onOrderBookUpdated(handler: (message: OrderBookUpdatedMessage) => void): () => void;
   onTradeRecorded(handler: (message: TradeRecordedMessage) => void): () => void;
+  onFundsUpdated(handler: (message: FundsUpdatedMessage) => void): () => void;
   onSettlementUpdated(
     handler: (message: SettlementUpdatedMessage) => void,
   ): () => void;
@@ -36,6 +39,29 @@ type RawSettlementUpdatedMessage = {
   changedAtUtc: string;
   failureReason: string | null;
   version?: number;
+};
+
+type RawFundsUpdatedMessage = FundsUpdatedPayload & { version?: number };
+
+const sleep = (durationMs: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, durationMs);
+  });
+
+const ensureConnected = async (connection: HubConnection) => {
+  if (connection.state === HubConnectionState.Disconnected) {
+    await connection.start();
+  }
+
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (connection.state === HubConnectionState.Connected) {
+      return;
+    }
+
+    await sleep(50);
+  }
+
+  throw new Error(`Market hub did not reach a connected state. Current state: ${connection.state}.`);
 };
 
 const isEnvelope = <TPayload,>(
@@ -60,6 +86,20 @@ const normalizeTradeMessage = (
   message: TradeRecordedMessage | RawTradeRecordedMessage,
 ): TradeRecordedMessage => {
   if (isEnvelope<TradeRecord>(message)) {
+    return message;
+  }
+
+  const { version = 1, ...payload } = message;
+  return {
+    version,
+    payload,
+  };
+};
+
+const normalizeFundsMessage = (
+  message: FundsUpdatedMessage | RawFundsUpdatedMessage,
+): FundsUpdatedMessage => {
+  if (isEnvelope<FundsUpdatedPayload>(message)) {
     return message;
   }
 
@@ -124,9 +164,7 @@ export const createMarketHubClient = (
 
   return {
     async start() {
-      if (connection.state === HubConnectionState.Disconnected) {
-        await connection.start();
-      }
+      await ensureConnected(connection);
     },
     async stop() {
       if (connection.state !== HubConnectionState.Disconnected) {
@@ -134,6 +172,7 @@ export const createMarketHubClient = (
       }
     },
     async joinMarket(symbol: string) {
+      await ensureConnected(connection);
       await connection.invoke("JoinMarket", symbol);
     },
     async leaveMarket(symbol: string) {
@@ -154,6 +193,14 @@ export const createMarketHubClient = (
         connection,
         "TradeRecorded",
         normalizeTradeMessage,
+        handler,
+      );
+    },
+    onFundsUpdated(handler) {
+      return registerHandler(
+        connection,
+        "FundsUpdated",
+        normalizeFundsMessage,
         handler,
       );
     },

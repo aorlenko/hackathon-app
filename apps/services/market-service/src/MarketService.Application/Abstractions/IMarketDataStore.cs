@@ -14,7 +14,9 @@ public sealed class DemoAccount
 public interface IMarketDataStore
 {
     Task<DemoAccount?> GetAccountAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DemoAccount>> GetAccountsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken = default);
     Task<DemoAccount> EnsureDemoAccountAsync(string userId, string? displayName, string? email, CancellationToken cancellationToken = default);
+    Task SaveAccountsAsync(IEnumerable<DemoAccount> accounts, CancellationToken cancellationToken = default);
     Task<Item?> GetItemBySymbolAsync(string symbol, CancellationToken cancellationToken = default);
     Task<List<Item>> GetItemsAsync(CancellationToken cancellationToken = default);
     Task<List<Order>> GetOpenOrdersAsync(string symbol, CancellationToken cancellationToken = default);

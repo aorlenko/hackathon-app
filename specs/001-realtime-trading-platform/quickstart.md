@@ -19,7 +19,7 @@ Create local `.env`/user-secrets values:
 - `SERVICEBUS_CONNECTION_STRING`
 - `APPLICATIONINSIGHTS_CONNECTION_STRING` (optional local)
 
-The services now use EF Core migrations. On app startup, each service applies its own migrations before serving requests.
+The services use EF Core migrations, but **they are not applied automatically** on startup. After SQL Server is reachable, run `dotnet ef database update` for each service’s Infrastructure project (see Docker section below) so the `TradingPlatform` database and tables exist.
 For real local end-to-end `Order -> Trade -> Settlement`, `SERVICEBUS_CONNECTION_STRING` must point to a real Azure Service Bus namespace. `Azurite` is not sufficient because it emulates Azure Storage, not Azure Service Bus.
 When `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, and `AUTH0_CLIENT_ID` are configured, the frontend uses Auth0 login and the backend validates real JWT bearer tokens. If Auth0 settings are omitted, the app falls back to demo authentication for local development.
 
@@ -55,6 +55,17 @@ Alternative containerized profile:
 docker compose --profile apps up -d --build
 ```
 
+With Docker SQL (port `14333` on the host), create/update the shared `TradingPlatform` database **before** or **after** bringing containers up (SQL must be running):
+
+```powershell
+$cs = "Server=localhost,14333;Database=TradingPlatform;User Id=sa;Password=LocalDevPassword123!;TrustServerCertificate=True;"
+dotnet ef database update --project apps/services/market-service/src/MarketService.Infrastructure/MarketService.Infrastructure.csproj --startup-project apps/services/market-service/src/MarketService/MarketService.csproj --context MarketDbContext --connection $cs
+dotnet ef database update --project apps/services/trade-service/src/TradeService.Infrastructure/TradeService.Infrastructure.csproj --startup-project apps/services/trade-service/src/TradeService/TradeService.csproj --context TradeDbContext --connection $cs
+dotnet ef database update --project apps/services/settlement-service/src/SettlementService.Infrastructure/SettlementService.Infrastructure.csproj --startup-project apps/services/settlement-service/src/SettlementService/SettlementService.csproj --context SettlementDbContext --connection $cs
+```
+
+Use your `SQL_SA_PASSWORD` if you overrode the compose default.
+
 Expected local URLs:
 - Frontend: `http://localhost:5173`
 - Market API + Hub: `http://localhost:7001`
@@ -63,7 +74,7 @@ Expected local URLs:
 
 ## 4) Apply Migrations And Seed Demo Data
 
-Start the services so EF Core applies migrations automatically, then rely on Market Service seeding for:
+After migrations (see above), the Market service migration `SeedDemoData` seeds:
 - demo users/accounts
 - tradable items
 - initial holdings/cash balances

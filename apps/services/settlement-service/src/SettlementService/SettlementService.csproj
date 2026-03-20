@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <ProjectReference Include="..\SettlementService.Application\SettlementService.Application.csproj" />
     <ProjectReference Include="..\SettlementService.Infrastructure\SettlementService.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\building-blocks\configuration\src\Trading.Configuration\Trading.Configuration.csproj" />

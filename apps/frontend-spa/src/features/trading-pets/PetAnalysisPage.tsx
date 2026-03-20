@@ -36,7 +36,10 @@ export const PetAnalysisPage = () => {
 
   return (
     <div className="trading-pets-page">
-      <h1>Pet analysis</h1>
+      <header className="trading-pets-page__header">
+        <h1>Pet analysis</h1>
+        <p className="muted">Detailed valuation payload for the selected pet.</p>
+      </header>
       {payload ? (
         <pre className="trading-pets-pre">{JSON.stringify(payload, null, 2)}</pre>
       ) : (

@@ -5,7 +5,7 @@ namespace MarketTrade.IntegrationTests;
 
 public sealed class OrderToTradeFlowTests
 {
-    [Fact]
+    [Fact(Skip = "Equity sell orders disabled (pets-only); matching flow requires seller inventory.")]
     public async Task Places_opposing_orders_and_records_trade_and_settlement()
     {
         var harness = new TradingPlatformHarness();
@@ -22,7 +22,7 @@ public sealed class OrderToTradeFlowTests
         Assert.Equal(SettlementService.Domain.Entities.SettlementStatus.SETTLED, settlements[0].Status);
     }
 
-    [Fact]
+    [Fact(Skip = "Equity sell orders disabled (pets-only); matching flow requires seller inventory.")]
     public async Task Auto_provisioned_users_can_trade_and_settle()
     {
         var harness = new TradingPlatformHarness();

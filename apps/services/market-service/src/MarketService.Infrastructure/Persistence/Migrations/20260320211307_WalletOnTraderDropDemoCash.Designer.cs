@@ -4,6 +4,7 @@ using MarketService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MarketService.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(MarketDbContext))]
-    partial class MarketDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260320211307_WalletOnTraderDropDemoCash")]
+    partial class WalletOnTraderDropDemoCash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -470,6 +473,44 @@ namespace MarketService.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MarketService.Infrastructure.Persistence.DemoHoldingRecord", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Symbol")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId", "Symbol");
+
+                    b.ToTable("DemoHoldings", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = "user-1",
+                            Symbol = "ABC",
+                            Quantity = 10
+                        },
+                        new
+                        {
+                            UserId = "user-2",
+                            Symbol = "ABC",
+                            Quantity = 200
+                        },
+                        new
+                        {
+                            UserId = "user-3",
+                            Symbol = "XYZ",
+                            Quantity = 25
+                        });
+                });
+
             modelBuilder.Entity("MarketService.Domain.Entities.Bid", b =>
                 {
                     b.HasOne("MarketService.Domain.Entities.Trader", "Buyer")
@@ -584,6 +625,15 @@ namespace MarketService.Infrastructure.Persistence.Migrations
                     b.Navigation("Seller");
                 });
 
+            modelBuilder.Entity("MarketService.Infrastructure.Persistence.DemoHoldingRecord", b =>
+                {
+                    b.HasOne("MarketService.Infrastructure.Persistence.DemoAccountRecord", null)
+                        .WithMany("Holdings")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MarketService.Domain.Entities.Breed", b =>
                 {
                     b.Navigation("Pets");
@@ -607,6 +657,11 @@ namespace MarketService.Infrastructure.Persistence.Migrations
                     b.Navigation("Notifications");
 
                     b.Navigation("Pets");
+                });
+
+            modelBuilder.Entity("MarketService.Infrastructure.Persistence.DemoAccountRecord", b =>
+                {
+                    b.Navigation("Holdings");
                 });
 #pragma warning restore 612, 618
         }

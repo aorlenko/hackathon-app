@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getNotifications, type NotificationDto } from "./tradingPetsApi";
 
 type Props = {
   traderId: string;
   accessToken?: string;
+  reloadToken: number;
 };
 
 const labelForType = (type: string) => {
@@ -27,7 +28,7 @@ const labelForType = (type: string) => {
   }
 };
 
-export const NotificationsPanel = ({ traderId, accessToken }: Props) => {
+export const NotificationsPanel = ({ traderId, accessToken, reloadToken }: Props) => {
   const [rows, setRows] = useState<NotificationDto[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,13 +42,18 @@ export const NotificationsPanel = ({ traderId, accessToken }: Props) => {
     }
   };
 
+  useEffect(() => {
+    if (!traderId || !accessToken) {
+      return;
+    }
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [traderId, accessToken, reloadToken]);
+
   return (
     <section className="trading-pets-card">
       <header className="trading-pets-card__header">
         <h2>Notifications</h2>
-        <button type="button" className="secondary-button" onClick={() => void load()}>
-          Refresh
-        </button>
       </header>
       <ul className="trading-pets-notifications">
         {rows.map((n) => (

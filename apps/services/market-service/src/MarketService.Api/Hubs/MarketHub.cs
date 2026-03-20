@@ -16,11 +16,26 @@ public sealed class MarketHub : Hub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, TradesGroup(symbol)).ConfigureAwait(false);
     }
 
-    public Task SubscribeTradingPetsTrader(Guid traderId) =>
-        Groups.AddToGroupAsync(Context.ConnectionId, TradingPetsTraderGroup(traderId));
+    /// <summary>Accept string from JSON clients to avoid Guid serialization edge cases.</summary>
+    public Task SubscribeTradingPetsTrader(string traderId)
+    {
+        if (!Guid.TryParse(traderId, out var id))
+        {
+            throw new HubException("Invalid traderId.");
+        }
 
-    public Task UnsubscribeTradingPetsTrader(Guid traderId) =>
-        Groups.RemoveFromGroupAsync(Context.ConnectionId, TradingPetsTraderGroup(traderId));
+        return Groups.AddToGroupAsync(Context.ConnectionId, TradingPetsTraderGroup(id));
+    }
+
+    public Task UnsubscribeTradingPetsTrader(string traderId)
+    {
+        if (!Guid.TryParse(traderId, out var id))
+        {
+            return Task.CompletedTask;
+        }
+
+        return Groups.RemoveFromGroupAsync(Context.ConnectionId, TradingPetsTraderGroup(id));
+    }
 
     public Task SubscribeTradingPetsMarket() =>
         Groups.AddToGroupAsync(Context.ConnectionId, TradingPetsMarketGroup);

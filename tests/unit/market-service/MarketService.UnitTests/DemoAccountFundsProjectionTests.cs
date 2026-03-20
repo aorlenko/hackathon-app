@@ -7,7 +7,7 @@ namespace MarketService.UnitTests;
 public sealed class DemoAccountFundsProjectionTests
 {
     [Fact]
-    public async Task Applies_buyer_and_seller_balance_changes_for_confirmed_trade()
+    public async Task Applies_buyer_and_seller_cash_changes_for_confirmed_trade()
     {
         var harness = new TradingPlatformHarness();
         var handler = new ApplyTradeToAccountsHandler(harness.MarketStore);
@@ -19,21 +19,20 @@ public sealed class DemoAccountFundsProjectionTests
         Assert.Equal(2, updates.Count);
         Assert.Equal(249700m, buyer!.CashAvailable);
         Assert.Equal(150300m, seller!.CashAvailable);
-        Assert.Equal(13, buyer.Holdings["ABC"]);
-        Assert.Equal(197, seller.Holdings["ABC"]);
     }
 
     [Fact]
-    public async Task Removes_seller_holding_when_trade_consumes_the_remaining_quantity()
+    public async Task Large_trade_transfers_cash_between_wallets()
     {
         var harness = new TradingPlatformHarness();
         var handler = new ApplyTradeToAccountsHandler(harness.MarketStore);
 
         await handler.HandleAsync(CreateTradeRecorded(quantity: 200, price: 100m));
+        var buyer = await harness.MarketStore.GetAccountAsync("user-1");
         var seller = await harness.MarketStore.GetAccountAsync("user-2");
 
-        Assert.NotNull(seller);
-        Assert.False(seller!.Holdings.ContainsKey("ABC"));
+        Assert.Equal(230000m, buyer!.CashAvailable);
+        Assert.Equal(170000m, seller!.CashAvailable);
     }
 
     private static TradeRecorded CreateTradeRecorded(int quantity, decimal price)

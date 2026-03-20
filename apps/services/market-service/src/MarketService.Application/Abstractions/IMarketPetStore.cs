@@ -11,6 +11,7 @@ public interface IMarketPetStore
     Task<Guid> EnsureLinkedTraderForUserAsync(
         string externalUserSub,
         string displayName,
+        string? email = null,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<BreedSupplyRow>> GetBreedsWithSupplyAsync(CancellationToken cancellationToken = default);
@@ -93,6 +94,7 @@ public sealed record MarketListingRow(
     string BreedName,
     decimal AskingPrice,
     string SellerDisplayName,
+    string? SellerEmail,
     DateTimeOffset CreatedAt,
     decimal? RecentTradePriceForBreed,
     int RemainingNewSupplyForBreed);

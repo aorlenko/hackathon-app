@@ -9,18 +9,14 @@ public sealed record AccountIdentityDto(
     string DisplayName,
     string Email);
 
-public sealed record DemoHoldingDto(string Symbol, int Quantity);
-
 public sealed record DemoAccountDto(
     string UserId,
     string DisplayName,
     string Email,
-    decimal CashAvailable,
-    IReadOnlyList<DemoHoldingDto> Holdings);
+    decimal CashAvailable);
 
 public sealed record AccountSnapshotDto(
     string UserId,
     string DisplayName,
     string Email,
-    decimal CashAvailable,
-    IReadOnlyList<DemoHoldingDto> Holdings);
+    decimal CashAvailable);

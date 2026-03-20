@@ -46,6 +46,8 @@ export type MarketListingDto = {
   breedName: string;
   askingPrice: number;
   sellerDisplayName: string;
+  /** From linked demo account when the seller has ExternalUserId; use for display when display name is missing or opaque. */
+  sellerEmail?: string | null;
   createdAt: string;
   recentTradePriceForBreed: number | null;
   remainingNewSupplyForBreed: number;
@@ -54,6 +56,7 @@ export type MarketListingDto = {
 export const getBreeds = (accessToken?: string) =>
   fetchJson<BreedDto[]>(`${env.marketApiBaseUrl}/api/pets/breeds`, {
     headers: createHeaders(accessToken),
+    cache: "no-store",
   });
 
 export const purchasePets = (
@@ -84,6 +87,7 @@ export const getMyTraderSnapshot = (accessToken?: string) =>
 export const getMarketListings = (accessToken?: string) =>
   fetchJson<MarketListingDto[]>(`${env.marketApiBaseUrl}/api/market/listings`, {
     headers: createHeaders(accessToken),
+    cache: "no-store",
   });
 
 export const createListing = (
@@ -188,7 +192,7 @@ export type LeaderboardRowDto = {
 export const getLeaderboard = (accessToken?: string) =>
   fetchJson<LeaderboardRowDto[]>(
     `${env.marketApiBaseUrl}/api/traders/leaderboard`,
-    { headers: createHeaders(accessToken) },
+    { headers: createHeaders(accessToken), cache: "no-store" },
   );
 
 export type NotificationDto = {
@@ -209,5 +213,5 @@ export const getNotifications = (
 ) =>
   fetchJson<NotificationDto[]>(
     `${env.marketApiBaseUrl}/api/traders/${traderId}/notifications?limit=${limit}`,
-    { headers: createHeaders(accessToken) },
+    { headers: createHeaders(accessToken), cache: "no-store" },
   );

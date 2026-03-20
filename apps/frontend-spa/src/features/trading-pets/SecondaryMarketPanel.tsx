@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createListing,
   getMarketListings,
@@ -7,10 +7,12 @@ import {
   type PetSummaryDto,
 } from "./tradingPetsApi";
 import { ListingSellerActions } from "./ListingSellerActions";
+import { listingSellerClause } from "./listingSellerLabel";
 
 type Props = {
   traderId: string;
   accessToken?: string;
+  reloadToken: number;
   inventory: PetSummaryDto[];
   onChanged: () => void;
 };
@@ -18,6 +20,7 @@ type Props = {
 export const SecondaryMarketPanel = ({
   traderId,
   accessToken,
+  reloadToken,
   inventory,
   onChanged,
 }: Props) => {
@@ -28,22 +31,32 @@ export const SecondaryMarketPanel = ({
   const [bidAmount, setBidAmount] = useState(25);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const selectedListing = useMemo(
+    () => listings.find((l) => l.listingId === bidListingId) ?? null,
+    [listings, bidListingId],
+  );
+
+  useEffect(() => {
+    if (bidListingId && !listings.some((l) => l.listingId === bidListingId)) {
+      setBidListingId("");
+    }
+  }, [listings, bidListingId]);
+
+  const load = useCallback(async () => {
     setError(null);
     try {
       setListings(await getMarketListings(accessToken));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load listings");
     }
-  };
+  }, [accessToken]);
 
   useEffect(() => {
     if (!accessToken || !traderId) {
       return;
     }
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken, traderId]);
+  }, [accessToken, traderId, reloadToken, load]);
 
   const listPet = async () => {
     setError(null);
@@ -67,8 +80,13 @@ export const SecondaryMarketPanel = ({
 
   const bid = async () => {
     setError(null);
+    if (!selectedListing) {
+      setError("Choose a listing to bid on.");
+      return;
+    }
     try {
-      await placeBid(bidListingId, { traderId, amount: bidAmount }, accessToken);
+      await placeBid(selectedListing.listingId, { traderId, amount: bidAmount }, accessToken);
+      setBidListingId("");
       onChanged();
       await load();
     } catch (e) {
@@ -80,11 +98,12 @@ export const SecondaryMarketPanel = ({
     <section className="trading-pets-card">
       <header className="trading-pets-card__header">
         <h2>Secondary market</h2>
-        <button type="button" className="secondary-button" onClick={() => void load()}>
-          Refresh listings
-        </button>
       </header>
       <div className="trading-pets-card__body">
+        <p className="muted small">
+          A <strong>listing</strong> is a pet from inventory offered for resale at an asking price. Other traders can
+          pay the ask or place a bid for you to accept.
+        </p>
         <div className="trading-pets-form">
           <h3 className="trading-pets-subheading">List a pet</h3>
           <label className="trading-pets-field">
@@ -121,12 +140,24 @@ export const SecondaryMarketPanel = ({
         </div>
         <div className="trading-pets-form">
           <h3 className="trading-pets-subheading">Open listings</h3>
+          <p className="muted small">Everyone&apos;s active resale offers (including yours).</p>
           <ul className="trading-pets-list">
-            {listings.map((l) => (
-              <li key={l.listingId}>
+            {listings.map((l) => {
+              const sellerClause = listingSellerClause(
+                l.sellerTraderId,
+                l.sellerDisplayName,
+                l.sellerEmail,
+                traderId,
+              );
+              const isBidSelected = l.listingId === bidListingId;
+              return (
+              <li
+                key={l.listingId}
+                className={isBidSelected ? "trading-pets-list__item--selected" : undefined}
+              >
                 <div>
-                  <strong>{l.breedName}</strong> · ask ${l.askingPrice.toFixed(2)} · seller{" "}
-                  {l.sellerDisplayName}
+                  <strong>{l.breedName}</strong> · ask ${l.askingPrice.toFixed(2)}
+                  {sellerClause ? <> · {sellerClause}</> : null}
                 </div>
                 <div className="muted small">
                   Recent trade (breed):{" "}
@@ -147,41 +178,69 @@ export const SecondaryMarketPanel = ({
                   />
                 ) : (
                   <div className="trading-pets-inline">
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => setBidListingId(l.listingId)}
-                    >
-                      Select for bid
-                    </button>
+                    {isBidSelected ? (
+                      <span className="muted small" aria-current="true">
+                        Selected — use <strong>Place bid</strong> below
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => {
+                          setBidListingId(l.listingId);
+                          setBidAmount(Math.max(1, Math.round(l.askingPrice * 100) / 100));
+                        }}
+                      >
+                        Select for bid
+                      </button>
+                    )}
                   </div>
                 )}
               </li>
-            ))}
+            );
+            })}
           </ul>
         </div>
         <div className="trading-pets-form">
           <h3 className="trading-pets-subheading">Place bid</h3>
-          <label className="trading-pets-field">
-            <span>Listing</span>
-            <input
-              value={bidListingId}
-              onChange={(e) => setBidListingId(e.target.value)}
-              placeholder="listing id"
-            />
-          </label>
-          <label className="trading-pets-field">
-            <span>Amount</span>
-            <input
-              type="number"
-              min={1}
-              value={bidAmount}
-              onChange={(e) => setBidAmount(Number(e.target.value) || 1)}
-            />
-          </label>
-          <button type="button" className="primary-button" onClick={() => void bid()}>
-            Submit bid
-          </button>
+          {selectedListing ? (
+            <>
+              <div className="trading-pets-bid-target" aria-live="polite">
+                <div className="trading-pets-bid-target__row">
+                  <span className="trading-pets-bid-target__label">You&apos;re bidding on</span>
+                  <button
+                    type="button"
+                    className="inline-link trading-pets-bid-target__change"
+                    onClick={() => setBidListingId("")}
+                  >
+                    Change
+                  </button>
+                </div>
+                <p className="trading-pets-bid-target__summary">
+                  <strong>{selectedListing.breedName}</strong>
+                  <span className="muted"> · asking </span>
+                  ${selectedListing.askingPrice.toFixed(2)}
+                </p>
+              </div>
+              <label className="trading-pets-field">
+                <span>Your bid amount</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={0.01}
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(Number(e.target.value) || 1)}
+                />
+              </label>
+              <button type="button" className="primary-button" onClick={() => void bid()}>
+                Submit bid
+              </button>
+            </>
+          ) : (
+            <p className="muted small">
+              Use <strong>Select for bid</strong> on a listing above, then set your amount here.
+            </p>
+          )}
           <p className="muted small">
             Bids at or above the ask execute immediately; lower bids lock cash until accepted,
             rejected, withdrawn, or replaced.

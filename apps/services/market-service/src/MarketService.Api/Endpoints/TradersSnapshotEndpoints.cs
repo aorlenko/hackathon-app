@@ -31,7 +31,9 @@ public static class TradersSnapshotEndpoints
             ?? httpContext.User.FindFirst("email")?.Value
             ?? sub;
 
-        var traderId = await store.EnsureLinkedTraderForUserAsync(sub, displayName, cancellationToken)
+        var email = httpContext.User.FindFirst("email")?.Value;
+
+        var traderId = await store.EnsureLinkedTraderForUserAsync(sub, displayName, email, cancellationToken)
             .ConfigureAwait(false);
         var snapshot = await store.GetTraderSnapshotAsync(traderId, cancellationToken).ConfigureAwait(false);
         if (snapshot is null)

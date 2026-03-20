@@ -26,7 +26,7 @@ export const LifecycleTraceTable = ({
   const settlementMap = settlementByTradeId(settlements);
 
   return (
-    <section className="card">
+    <section className="trading-pets-card">
       <div className="section-header">
         <h2>Lifecycle trace</h2>
         <span className="tag">{trades.length}</span>
@@ -34,7 +34,7 @@ export const LifecycleTraceTable = ({
       {trades.length === 0 ? (
         <p className="muted">No lifecycle records available yet.</p>
       ) : (
-        <table className="data-table">
+        <table className="trading-pets-table">
           <thead>
             <tr>
               <th>Execution</th>

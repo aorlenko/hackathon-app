@@ -44,21 +44,18 @@ export const TradeHistoryPage = () => {
   }, [auth.accessToken, auth.userId]);
 
   return (
-    <section className="stack">
-      <section className="card">
-        <h2>Trade history</h2>
-        <p className="muted">
-          Review recent executions returned by the trade service.
-        </p>
-      </section>
-      <section className="card">
-        {loading ? <p>Loading trades...</p> : null}
-        {error ? <p className="error-text">{error}</p> : null}
-        {!loading && !error && trades.length === 0 ? (
-          <p className="muted">No historical trades found for this user.</p>
-        ) : null}
-        {trades.length > 0 ? (
-          <table className="data-table">
+    <div className="trading-pets-page">
+      <header className="trading-pets-page__header">
+        <h1>Trade history</h1>
+        <p className="muted">Review recent executions returned by the trade service.</p>
+      </header>
+      {loading ? <p className="trading-pets-loading">Loading trades...</p> : null}
+      {error ? <p className="error-text">{error}</p> : null}
+      {!loading && !error && trades.length === 0 ? (
+        <p className="muted">No historical trades found for this user.</p>
+      ) : null}
+      {trades.length > 0 ? (
+        <table className="trading-pets-table">
             <thead>
               <tr>
                 <th>Executed</th>
@@ -101,9 +98,8 @@ export const TradeHistoryPage = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
-        ) : null}
-      </section>
-    </section>
+        </table>
+      ) : null}
+    </div>
   );
 };

@@ -30,6 +30,8 @@ export interface TradingAuthState {
   displayName: string;
   accessToken?: string;
   accountSnapshot: AccountSnapshot | null;
+  /** Set when Auth0 returns an error (e.g. access_denied) on the callback URL. */
+  authError: string | null;
   mode: "auth0" | "demo";
   login: () => Promise<void>;
   logout: () => void;
@@ -172,6 +174,8 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
     bootstrappedUserId,
   ]);
 
+  const authError = auth0.error ? auth0.error.message : null;
+
   const value = useMemo<TradingAuthState>(
     () => ({
       isAuthenticated: auth0.isAuthenticated,
@@ -181,6 +185,7 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
       displayName: pickFriendlyDisplayName(auth0.user),
       accessToken,
       accountSnapshot,
+      authError,
       mode: "auth0",
       login,
       logout,
@@ -188,11 +193,13 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
     [
       auth0.isAuthenticated,
       auth0.isLoading,
+      auth0.error,
       auth0.user?.email,
       auth0.user?.name,
       auth0.user?.sub,
       accessToken,
       accountSnapshot,
+      authError,
       isBootstrappingAccount,
       isResolvingAccessToken,
       login,
@@ -283,6 +290,7 @@ const DemoAuthProvider = ({ children }: PropsWithChildren) => {
       displayName: userId ? "Demo Trader" : "Guest",
       accessToken: userId ?? undefined,
       accountSnapshot,
+      authError: null,
       mode: "demo",
       login,
       logout,
@@ -325,6 +333,7 @@ export const TradingAuthProvider = ({ children }: PropsWithChildren) => {
           displayName: "Guest",
           accessToken: undefined,
           accountSnapshot: null,
+          authError: null,
           mode: "demo",
           login: async () => undefined,
           logout: () => undefined,

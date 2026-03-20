@@ -1,4 +1,8 @@
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import {
+  HubConnectionBuilder,
+  HubConnectionState,
+  LogLevel,
+} from "@microsoft/signalr";
 import { useEffect, useRef } from "react";
 import { env } from "../../config/env";
 
@@ -77,18 +81,31 @@ export const useTradingPetsRealtime = ({
         await connection.invoke("SubscribeTradingPetsLeaderboard");
       } catch {
         if (!cancelled) {
-          disconnectTimer = window.setTimeout(() => {
+          // Hub is up but group subscribe failed — poll now so listings/notifications still converge.
+          if (connection.state === HubConnectionState.Connected) {
             startPoll();
-          }, DISCONNECT_POLL_AFTER_MS);
+          } else {
+            disconnectTimer = window.setTimeout(() => {
+              startPoll();
+            }, DISCONNECT_POLL_AFTER_MS);
+          }
         }
       }
     })();
 
     connection.onreconnected(() => {
       stopPoll();
-      void connection.invoke("SubscribeTradingPetsTrader", traderId);
-      void connection.invoke("SubscribeTradingPetsMarket");
-      void connection.invoke("SubscribeTradingPetsLeaderboard");
+      void (async () => {
+        try {
+          await connection.invoke("SubscribeTradingPetsTrader", traderId);
+          await connection.invoke("SubscribeTradingPetsMarket");
+          await connection.invoke("SubscribeTradingPetsLeaderboard");
+        } catch {
+          if (connection.state === HubConnectionState.Connected) {
+            startPoll();
+          }
+        }
+      })();
     });
 
     connection.onclose(() => {

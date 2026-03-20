@@ -5,12 +5,15 @@ import { getBreeds, purchasePets } from "./tradingPetsApi";
 type Props = {
   traderId: string;
   accessToken?: string;
+  /** Bumped when SignalR (or poll) invalidates workspace data so breed supply stays in sync. */
+  reloadToken: number;
   onPurchased: () => void;
 };
 
 export const PrimaryMarketPanel = ({
   traderId,
   accessToken,
+  reloadToken,
   onPurchased,
 }: Props) => {
   const [breeds, setBreeds] = useState<BreedDto[]>([]);
@@ -45,8 +48,8 @@ export const PrimaryMarketPanel = ({
       return;
     }
     void loadBreeds();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per token; manual refresh still available
-  }, [accessToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reloadToken intentionally triggers refetch
+  }, [accessToken, reloadToken]);
 
   const onPurchase = async () => {
     setError(null);
@@ -71,9 +74,6 @@ export const PrimaryMarketPanel = ({
         </p>
       </header>
       <div className="trading-pets-card__body">
-        <button type="button" className="secondary-button" onClick={() => void loadBreeds()}>
-          Refresh breeds
-        </button>
         {breeds.length > 0 ? (
           <div className="trading-pets-form">
             <label className="trading-pets-field">
@@ -113,7 +113,7 @@ export const PrimaryMarketPanel = ({
             </button>
           </div>
         ) : !loading ? (
-          <p className="muted small">No breeds returned — check the API or try refresh.</p>
+          <p className="muted small">No breeds returned — check the API or your connection.</p>
         ) : null}
         {error ? <p className="trading-pets-error">{error}</p> : null}
       </div>

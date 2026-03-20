@@ -17,6 +17,11 @@ export const ProtectedRoute = () => {
     return (
       <section className="card">
         <h2>Sign in required</h2>
+        {auth.authError ? (
+          <p className="trading-pets-error" role="alert">
+            {auth.authError}
+          </p>
+        ) : null}
         <p>
           Trading actions require an active session. Sign in to view protected
           routes and place orders.

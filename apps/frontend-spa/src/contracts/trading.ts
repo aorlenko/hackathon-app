@@ -44,11 +44,6 @@ export interface PlaceOrderResponse {
   remainingQuantity: number;
 }
 
-export interface DemoHolding {
-  symbol: string;
-  quantity: number;
-}
-
 export interface BootstrapDemoAccountRequest {
   displayName?: string;
   email?: string;
@@ -63,7 +58,6 @@ export interface DemoAccount {
   displayName: string;
   email: string;
   cashAvailable: number;
-  holdings: DemoHolding[];
 }
 
 export interface AccountIdentity {
@@ -77,7 +71,6 @@ export interface AccountSnapshot {
   displayName: string;
   email: string;
   cashAvailable: number;
-  holdings: DemoHolding[];
 }
 
 export type FundsDisplayState =

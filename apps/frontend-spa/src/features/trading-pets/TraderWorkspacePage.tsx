@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { useMyPetTrader } from "./MyPetTraderContext";
 import { NotificationsPanel } from "./NotificationsPanel";
@@ -8,22 +9,33 @@ import { useTradingPetsRealtime } from "./useTradingPetsRealtime";
 export const TraderWorkspacePage = () => {
   const auth = useTradingAuth();
   const { traderId, snapshot, refresh } = useMyPetTrader();
+  const [panelTick, setPanelTick] = useState(0);
+
+  const onRealtimeInvalidate = useCallback(async () => {
+    // Bump panels first so listings/breeds/notifications refetch even if snapshot refresh hangs or fails.
+    setPanelTick((n) => n + 1);
+    try {
+      await refresh();
+    } catch {
+      /* snapshot optional for cross-user listing updates */
+    }
+  }, [refresh]);
 
   useTradingPetsRealtime({
     traderId,
     accessToken: auth.accessToken,
-    onRefreshSnapshot: refresh,
+    onRefreshSnapshot: onRealtimeInvalidate,
   });
 
   return (
     <div className="trading-pets-workspace">
-      <section className="trading-pets-hero">
+      <header className="trading-pets-page__header">
         <h1>Pet trading</h1>
-        <p className="trading-pets-hero__lede">
+        <p className="muted">
           Buy from primary supply, list on the secondary market, and track bids — all tied to your signed-in
           account.
         </p>
-      </section>
+      </header>
 
       {snapshot ? (
         <section className="trading-pets-summary">
@@ -46,11 +58,13 @@ export const TraderWorkspacePage = () => {
         <PrimaryMarketPanel
           traderId={traderId}
           accessToken={auth.accessToken}
+          reloadToken={panelTick}
           onPurchased={() => void refresh()}
         />
         <SecondaryMarketPanel
           traderId={traderId}
           accessToken={auth.accessToken}
+          reloadToken={panelTick}
           inventory={snapshot?.pets ?? []}
           onChanged={() => void refresh()}
         />
@@ -78,7 +92,11 @@ export const TraderWorkspacePage = () => {
             )}
           </ul>
         </section>
-        <NotificationsPanel traderId={traderId} accessToken={auth.accessToken} />
+        <NotificationsPanel
+          traderId={traderId}
+          accessToken={auth.accessToken}
+          reloadToken={panelTick}
+        />
       </div>
     </div>
   );

@@ -33,6 +33,7 @@ public static class MarketTradingEndpoints
             breedName = l.BreedName,
             askingPrice = l.AskingPrice,
             sellerDisplayName = l.SellerDisplayName,
+            sellerEmail = l.SellerEmail,
             createdAt = l.CreatedAt,
             recentTradePriceForBreed = l.RecentTradePriceForBreed,
             remainingNewSupplyForBreed = l.RemainingNewSupplyForBreed
@@ -168,6 +169,7 @@ public static class MarketTradingEndpoints
             }
 
             await realtime.NotifyTraderNotificationsAsync(body.TraderId, cancellationToken).ConfigureAwait(false);
+            await realtime.NotifyMarketListingsRefreshAsync(cancellationToken).ConfigureAwait(false);
             return Results.Created($"/api/market/bids/{pending.BidId}", new { bidId = pending.BidId, status = "Active" });
         }
 

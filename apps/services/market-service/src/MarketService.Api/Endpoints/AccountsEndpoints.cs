@@ -96,10 +96,6 @@ public static class AccountsEndpoints
             account.UserId,
             account.DisplayName,
             account.Email,
-            account.CashAvailable,
-            account.Holdings
-                .OrderBy(holding => holding.Key, StringComparer.OrdinalIgnoreCase)
-                .Select(holding => new DemoHoldingDto(holding.Key, holding.Value))
-                .ToList());
+            account.CashAvailable);
     }
 }

@@ -39,46 +39,27 @@ internal static class MarketSeedData
         {
             UserId = "user-1",
             DisplayName = "Buyer One",
-            Email = "user1@example.com",
-            CashAvailable = 250000m
+            Email = "user1@example.com"
         },
         new DemoAccountRecord
         {
             UserId = "user-2",
             DisplayName = "Seller Two",
-            Email = "user2@example.com",
-            CashAvailable = 150000m
+            Email = "user2@example.com"
         },
         new DemoAccountRecord
         {
             UserId = "user-3",
             DisplayName = "Observer Three",
-            Email = "user3@example.com",
-            CashAvailable = 50000m
+            Email = "user3@example.com"
         }
     ];
 
-    public static readonly DemoHoldingRecord[] Holdings =
+    /// <summary>Spendable cash for seeded demo users; stored on PetTraders (ExternalUserId = UserId).</summary>
+    public static readonly (string UserId, string DisplayName, decimal AvailableCash)[] SeededUserWallets =
     [
-        new DemoHoldingRecord
-        {
-            UserId = "user-1",
-            Symbol = "ABC",
-            Quantity = 10
-        },
-        new DemoHoldingRecord
-        {
-            UserId = "user-2",
-            Symbol = "ABC",
-            Quantity = 200
-        },
-        new DemoHoldingRecord
-        {
-            UserId = "user-3",
-            Symbol = "XYZ",
-            Quantity = 25
-        }
+        ("user-1", "Buyer One", 250000m),
+        ("user-2", "Seller Two", 150000m),
+        ("user-3", "Observer Three", 50000m)
     ];
-
-    public static readonly (string Symbol, int Quantity)[] AutoProvisionedHoldings = [];
 }

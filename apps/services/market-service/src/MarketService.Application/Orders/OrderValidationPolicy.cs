@@ -29,21 +29,16 @@ public sealed class OrderValidationPolicy
             return (false, "item_not_tradable", "The requested item is not tradable.");
         }
 
-        if (request.Side == OrderSideDto.BUY)
+        if (request.Side == OrderSideDto.SELL)
         {
-            var cost = request.Price * request.Quantity;
-            if (account.CashAvailable < cost)
-            {
-                return (false, "insufficient_cash", "Insufficient simulated cash balance.");
-            }
+            return (false, "stock_trading_disabled", "Equity sell orders are disabled; use the pet marketplace.");
         }
-        else
+
+        var cost = request.Price * request.Quantity;
+        var spendable = await store.GetTraderSpendableCashAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (spendable < cost)
         {
-            account.Holdings.TryGetValue(item.Symbol, out var holding);
-            if (holding < request.Quantity)
-            {
-                return (false, "insufficient_holdings", "Insufficient simulated holdings.");
-            }
+            return (false, "insufficient_cash", "Insufficient simulated cash balance.");
         }
 
         return (true, null, null);

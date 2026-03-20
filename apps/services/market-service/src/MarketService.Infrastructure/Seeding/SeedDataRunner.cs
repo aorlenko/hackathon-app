@@ -18,16 +18,21 @@ public static class SeedDataRunner
         {
             UserId = account.UserId,
             DisplayName = account.DisplayName,
-            Email = account.Email,
-            CashAvailable = account.CashAvailable
+            Email = account.Email
         }));
 
-        store.Holdings.AddRange(MarketSeedData.Holdings.Select(holding => new DemoHoldingRecord
+        foreach (var w in MarketSeedData.SeededUserWallets)
         {
-            UserId = holding.UserId,
-            Symbol = holding.Symbol,
-            Quantity = holding.Quantity
-        }));
+            store.Traders.Add(new Trader
+            {
+                Id = Guid.NewGuid(),
+                DisplayName = w.DisplayName,
+                ExternalUserId = w.UserId,
+                AvailableCash = w.AvailableCash,
+                LockedCash = 0,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
 
         await store.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }

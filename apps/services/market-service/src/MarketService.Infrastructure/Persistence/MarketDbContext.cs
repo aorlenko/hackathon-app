@@ -16,7 +16,6 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderMatchAudit> Audits => Set<OrderMatchAudit>();
     public DbSet<DemoAccountRecord> Accounts => Set<DemoAccountRecord>();
-    public DbSet<DemoHoldingRecord> Holdings => Set<DemoHoldingRecord>();
     public DbSet<Trader> Traders => Set<Trader>();
     public DbSet<Breed> Breeds => Set<Breed>();
     public DbSet<Supply> Supplies => Set<Supply>();
@@ -33,7 +32,6 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
     public async Task<DemoAccount?> GetAccountAsync(string userId, CancellationToken cancellationToken = default)
     {
         var account = await Accounts
-            .Include(x => x.Holdings)
             .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -42,20 +40,14 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             return null;
         }
 
-        var result = new DemoAccount
+        var spendable = await GetTraderSpendableCashAsync(userId, cancellationToken).ConfigureAwait(false);
+        return new DemoAccount
         {
             UserId = account.UserId,
             DisplayName = account.DisplayName,
             Email = MarketUserIdentityDefaults.NormalizeEmail(account.Email, account.UserId),
-            CashAvailable = account.CashAvailable
+            CashAvailable = spendable
         };
-
-        foreach (var holding in account.Holdings)
-        {
-            result.Holdings[holding.Symbol] = holding.Quantity;
-        }
-
-        return result;
     }
 
     public async Task<IReadOnlyList<DemoAccount>> GetAccountsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken = default)
@@ -76,13 +68,18 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        var cashByUser = await Traders.AsNoTracking()
+            .Where(t => t.ExternalUserId != null && normalizedUserIds.Contains(t.ExternalUserId))
+            .ToDictionaryAsync(t => t.ExternalUserId!, t => t.AvailableCash, StringComparer.Ordinal, cancellationToken)
+            .ConfigureAwait(false);
+
         return accounts
             .Select(account => new DemoAccount
             {
                 UserId = account.UserId,
                 DisplayName = account.DisplayName,
                 Email = MarketUserIdentityDefaults.NormalizeEmail(account.Email, account.UserId),
-                CashAvailable = account.CashAvailable
+                CashAvailable = cashByUser.GetValueOrDefault(account.UserId, 0m)
             })
             .ToList();
     }
@@ -93,7 +90,6 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
         var normalizedEmail = MarketUserIdentityDefaults.NormalizeEmail(email, userId);
 
         var existing = await Accounts
-            .Include(x => x.Holdings)
             .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -103,20 +99,17 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             {
                 UserId = userId,
                 DisplayName = normalizedDisplayName,
-                Email = normalizedEmail,
-                CashAvailable = MarketSeedData.AutoProvisionedCashAvailable,
-                Holdings = MarketSeedData.AutoProvisionedHoldings
-                    .Select(holding => new DemoHoldingRecord
-                    {
-                        UserId = userId,
-                        Symbol = holding.Symbol,
-                        Quantity = holding.Quantity
-                    })
-                    .ToList()
+                Email = normalizedEmail
             };
 
             Accounts.Add(existing);
             await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureUserWalletTraderAsync(
+                    userId,
+                    normalizedDisplayName,
+                    MarketSeedData.AutoProvisionedCashAvailable,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
         else
         {
@@ -137,81 +130,66 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             {
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }
+
+            await EnsureUserWalletTraderAsync(
+                    userId,
+                    existing.DisplayName,
+                    MarketSeedData.AutoProvisionedCashAvailable,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
 
         return await GetAccountAsync(userId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Could not provision demo account for {userId}.");
     }
 
-    public async Task SaveAccountsAsync(IEnumerable<DemoAccount> accounts, CancellationToken cancellationToken = default)
+    public async Task<decimal> GetTraderSpendableCashAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var accountList = accounts
-            .Where(account => !string.IsNullOrWhiteSpace(account.UserId))
-            .GroupBy(account => account.UserId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.Last())
-            .ToList();
+        var row = await Traders.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.ExternalUserId == userId, cancellationToken)
+            .ConfigureAwait(false);
+        return row?.AvailableCash ?? 0m;
+    }
 
-        if (accountList.Count == 0)
+    public async Task AdjustTraderSpendableCashAsync(string userId, decimal delta, CancellationToken cancellationToken = default)
+    {
+        var row = await Traders.FirstOrDefaultAsync(t => t.ExternalUserId == userId, cancellationToken).ConfigureAwait(false);
+        if (row is null)
+        {
+            throw new InvalidOperationException($"No wallet trader exists for user {userId}.");
+        }
+
+        var next = row.AvailableCash + delta;
+        if (next < 0)
+        {
+            throw new InvalidOperationException($"Wallet for {userId} would be negative ({next}).");
+        }
+
+        row.AvailableCash = next;
+        await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task EnsureUserWalletTraderAsync(
+        string userId,
+        string displayName,
+        decimal initialCashIfNew,
+        CancellationToken cancellationToken)
+    {
+        var row = await Traders.FirstOrDefaultAsync(t => t.ExternalUserId == userId, cancellationToken).ConfigureAwait(false);
+        if (row is not null)
         {
             return;
         }
 
-        var userIds = accountList.Select(account => account.UserId).ToList();
-        var persistedAccounts = await Accounts
-            .Include(account => account.Holdings)
-            .Where(account => userIds.Contains(account.UserId))
-            .ToDictionaryAsync(account => account.UserId, StringComparer.OrdinalIgnoreCase, cancellationToken)
-            .ConfigureAwait(false);
-
-        foreach (var account in accountList)
+        Traders.Add(new Trader
         {
-            if (!persistedAccounts.TryGetValue(account.UserId, out var persistedAccount))
-            {
-                throw new InvalidOperationException($"Could not load demo account for {account.UserId}.");
-            }
-
-            persistedAccount.DisplayName = account.DisplayName;
-            persistedAccount.Email = MarketUserIdentityDefaults.NormalizeEmail(account.Email, account.UserId);
-            persistedAccount.CashAvailable = account.CashAvailable;
-
-            var incomingHoldings = account.Holdings
-                .Where(holding => holding.Value > 0)
-                .ToDictionary(
-                    holding => holding.Key.ToUpperInvariant(),
-                    holding => holding.Value,
-                    StringComparer.OrdinalIgnoreCase);
-
-            foreach (var existingHolding in persistedAccount.Holdings.ToList())
-            {
-                if (incomingHoldings.TryGetValue(existingHolding.Symbol, out var quantity))
-                {
-                    existingHolding.Quantity = quantity;
-                    continue;
-                }
-
-                Holdings.Remove(existingHolding);
-            }
-
-            var existingSymbols = persistedAccount.Holdings
-                .Select(holding => holding.Symbol)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var holding in incomingHoldings)
-            {
-                if (existingSymbols.Contains(holding.Key))
-                {
-                    continue;
-                }
-
-                persistedAccount.Holdings.Add(new DemoHoldingRecord
-                {
-                    UserId = persistedAccount.UserId,
-                    Symbol = holding.Key,
-                    Quantity = holding.Value
-                });
-            }
-        }
-
+            Id = Guid.NewGuid(),
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? "Trader" : displayName.Trim(),
+            ExternalUserId = userId,
+            AvailableCash = initialCashIfNew,
+            LockedCash = 0,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
         await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -286,20 +264,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.UserId).HasMaxLength(128);
             entity.Property(x => x.DisplayName).HasMaxLength(256);
             entity.Property(x => x.Email).HasMaxLength(256);
-            entity.Property(x => x.CashAvailable).HasColumnType("decimal(18,2)");
-            entity.HasMany(x => x.Holdings)
-                .WithOne()
-                .HasForeignKey(x => x.UserId);
             entity.HasData(MarketSeedData.Accounts);
-        });
-
-        modelBuilder.Entity<DemoHoldingRecord>(entity =>
-        {
-            entity.ToTable("DemoHoldings");
-            entity.HasKey(x => new { x.UserId, x.Symbol });
-            entity.Property(x => x.UserId).HasMaxLength(128);
-            entity.Property(x => x.Symbol).HasMaxLength(32);
-            entity.HasData(MarketSeedData.Holdings);
         });
 
         modelBuilder.Entity<Trader>(entity =>
@@ -433,13 +398,4 @@ public sealed class DemoAccountRecord
     public string UserId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public decimal CashAvailable { get; set; }
-    public List<DemoHoldingRecord> Holdings { get; set; } = [];
-}
-
-public sealed class DemoHoldingRecord
-{
-    public string UserId { get; set; } = string.Empty;
-    public string Symbol { get; set; } = string.Empty;
-    public int Quantity { get; set; }
 }

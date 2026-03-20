@@ -4,12 +4,14 @@
 
 **Client → server (hub methods)**
 
-| Method | Payload | Group membership |
+| Method (invoke target) | Payload | Group membership |
 |--------|---------|------------------|
-| `SubscribeTradingPetsTrader` | `traderId` (Guid) | `tp:trader:{traderId}` |
-| `UnsubscribeTradingPetsTrader` | `traderId` (Guid) | removes from `tp:trader:{traderId}` |
+| `SubscribeTradingPetsTrader` | `traderId` (string UUID) | `tp:trader:{traderId}` |
+| `UnsubscribeTradingPetsTrader` | `traderId` (string UUID) | removes from `tp:trader:{traderId}` |
 | `SubscribeTradingPetsMarket` | — | `tp:market` (`MarketHub.TradingPetsMarketGroup`) |
 | `SubscribeTradingPetsLeaderboard` | — | `tp:leaderboard` (`MarketHub.TradingPetsLeaderboardGroup`) |
+
+Server parses `traderId` with `Guid.TryParse` so JSON clients can send a plain string without Guid wire quirks.
 
 **Server → client (method names)**
 

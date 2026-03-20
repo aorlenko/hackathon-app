@@ -59,33 +59,29 @@ public sealed class MarketPetDataStore : IMarketPetStore
     public async Task<Guid> EnsureLinkedTraderForUserAsync(
         string externalUserSub,
         string displayName,
+        string? email = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(externalUserSub);
 
         var normalizedName = string.IsNullOrWhiteSpace(displayName) ? "Trader" : displayName.Trim();
 
+        await _db.EnsureDemoAccountAsync(externalUserSub, normalizedName, email, cancellationToken).ConfigureAwait(false);
+
         var existing = await _db.Traders
             .FirstOrDefaultAsync(t => t.ExternalUserId == externalUserSub, cancellationToken)
             .ConfigureAwait(false);
         if (existing is not null)
         {
-            await ReconcileLinkedTraderAvailableFromDemoAccountAsync(existing, cancellationToken).ConfigureAwait(false);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return existing.Id;
         }
-
-        await _db.EnsureDemoAccountAsync(externalUserSub, normalizedName, null, cancellationToken).ConfigureAwait(false);
-        var account = await _db.Accounts
-            .FirstAsync(a => a.UserId == externalUserSub, cancellationToken)
-            .ConfigureAwait(false);
 
         var trader = new Trader
         {
             Id = Guid.NewGuid(),
             DisplayName = normalizedName,
             ExternalUserId = externalUserSub,
-            AvailableCash = account.CashAvailable,
+            AvailableCash = MarketSeedData.AutoProvisionedCashAvailable,
             LockedCash = 0,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -104,8 +100,6 @@ public sealed class MarketPetDataStore : IMarketPetStore
                 .ConfigureAwait(false);
             if (retry is not null)
             {
-                await ReconcileLinkedTraderAvailableFromDemoAccountAsync(retry, cancellationToken).ConfigureAwait(false);
-                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 return retry.Id;
             }
 
@@ -275,19 +269,62 @@ public sealed class MarketPetDataStore : IMarketPetStore
         var breedIds = listings.Select(l => l.Pet!.BreedId).Distinct().ToList();
         var recentPrices = await GetRecentTradePricesByBreedAsync(breedIds, cancellationToken).ConfigureAwait(false);
 
+        var sellerUserIds = listings
+            .Select(l => l.Seller?.ExternalUserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+        Dictionary<string, (string DisplayName, string Email)> sellerAccountByUserId;
+        if (sellerUserIds.Count == 0)
+        {
+            sellerAccountByUserId = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
+        }
+        else
+        {
+            var accountRows = await _db.Accounts.AsNoTracking()
+                .Where(a => sellerUserIds.Contains(a.UserId))
+                .Select(a => new { a.UserId, a.DisplayName, a.Email })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            sellerAccountByUserId = accountRows.ToDictionary(
+                x => x.UserId,
+                x => (x.DisplayName, x.Email),
+                StringComparer.Ordinal);
+        }
+
         return listings
             .Where(l => l.Pet?.Breed is not null && l.Seller is not null)
             .Select(l =>
             {
                 var breed = l.Pet!.Breed!;
                 recentPrices.TryGetValue(breed.Id, out var recent);
+                string? sellerEmail = null;
+                var ext = l.Seller!.ExternalUserId;
+                var traderDisplay = l.Seller!.DisplayName.Trim();
+                var sellerDisplayName = traderDisplay;
+                if (!string.IsNullOrWhiteSpace(ext) && sellerAccountByUserId.TryGetValue(ext, out var acct))
+                {
+                    var acctEmail = acct.Email.Trim();
+                    if (acctEmail.Length > 0)
+                    {
+                        sellerEmail = acctEmail;
+                    }
+
+                    var acctName = acct.DisplayName.Trim();
+                    if (traderDisplay.Contains('|', StringComparison.Ordinal) && acctName.Length > 0)
+                    {
+                        sellerDisplayName = acctName;
+                    }
+                }
+
                 return new MarketListingRow(
                     l.Id,
                     l.PetId,
                     l.SellerTraderId,
                     breed.Name,
                     l.AskingPrice,
-                    l.Seller!.DisplayName,
+                    sellerDisplayName,
+                    sellerEmail,
                     l.CreatedAt,
                     recent,
                     breed.Supply?.RemainingCount ?? 0);
@@ -1060,118 +1097,55 @@ public sealed class MarketPetDataStore : IMarketPetStore
         await Task.CompletedTask;
     }
 
-    private static bool IsLinkedToDemoAccount(Trader trader) =>
+    private static bool HasExternalUser(Trader trader) =>
         !string.IsNullOrWhiteSpace(trader.ExternalUserId);
 
-    private async Task<bool> HasSpendableCashAsync(Trader trader, decimal amount, CancellationToken cancellationToken)
+    private static Task<bool> HasSpendableCashAsync(Trader trader, decimal amount, CancellationToken cancellationToken)
     {
         if (amount <= 0)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
-        if (!IsLinkedToDemoAccount(trader))
-        {
-            return trader.AvailableCash >= amount;
-        }
-
-        var acct = await _db.Accounts.AsNoTracking()
-            .FirstOrDefaultAsync(a => a.UserId == trader.ExternalUserId!, cancellationToken)
-            .ConfigureAwait(false);
-        return acct is not null && acct.CashAvailable >= amount;
+        return Task.FromResult(trader.AvailableCash >= amount);
     }
 
-    private async Task<bool> TryDebitSpendableCashAsync(Trader trader, decimal amount, CancellationToken cancellationToken)
+    private static Task<bool> TryDebitSpendableCashAsync(Trader trader, decimal amount, CancellationToken cancellationToken)
     {
         if (amount <= 0)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
-        if (!IsLinkedToDemoAccount(trader))
+        if (trader.AvailableCash < amount)
         {
-            if (trader.AvailableCash < amount)
-            {
-                return false;
-            }
-
-            trader.AvailableCash -= amount;
-            return true;
+            return Task.FromResult(false);
         }
 
-        var acct = await _db.Accounts.FirstOrDefaultAsync(a => a.UserId == trader.ExternalUserId!, cancellationToken)
-            .ConfigureAwait(false);
-        if (acct is null || acct.CashAvailable < amount)
-        {
-            return false;
-        }
-
-        acct.CashAvailable -= amount;
         trader.AvailableCash -= amount;
-        return true;
+        return Task.FromResult(true);
     }
 
-    private async Task CreditSpendableCashAsync(Trader trader, decimal amount, CancellationToken cancellationToken)
+    private static Task CreditSpendableCashAsync(Trader trader, decimal amount, CancellationToken cancellationToken)
     {
         if (amount <= 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         trader.AvailableCash += amount;
-        if (!IsLinkedToDemoAccount(trader))
-        {
-            return;
-        }
-
-        var acct = await _db.Accounts.FirstOrDefaultAsync(a => a.UserId == trader.ExternalUserId!, cancellationToken)
-            .ConfigureAwait(false);
-        if (acct is null)
-        {
-            return;
-        }
-
-        acct.CashAvailable += amount;
-    }
-
-    private async Task ReconcileLinkedTraderAvailableFromDemoAccountAsync(Trader trader, CancellationToken cancellationToken)
-    {
-        if (!IsLinkedToDemoAccount(trader) || trader.LockedCash != 0)
-        {
-            return;
-        }
-
-        var acct = await _db.Accounts.AsNoTracking()
-            .FirstOrDefaultAsync(a => a.UserId == trader.ExternalUserId!, cancellationToken)
-            .ConfigureAwait(false);
-        if (acct is null)
-        {
-            return;
-        }
-
-        if (trader.AvailableCash != acct.CashAvailable)
-        {
-            trader.AvailableCash = acct.CashAvailable;
-        }
+        return Task.CompletedTask;
     }
 
     private async Task PublishFundsLinkedAsync(Trader? trader, CancellationToken cancellationToken)
     {
-        if (trader is null || !IsLinkedToDemoAccount(trader) || _fundsRealtime is null)
-        {
-            return;
-        }
-
-        var acct = await _db.Accounts.AsNoTracking()
-            .FirstOrDefaultAsync(a => a.UserId == trader.ExternalUserId!, cancellationToken)
-            .ConfigureAwait(false);
-        if (acct is null)
+        if (trader is null || !HasExternalUser(trader) || _fundsRealtime is null)
         {
             return;
         }
 
         await _fundsRealtime.NotifyFundsUpdatedAsync(
-            new FundsUpdatedRealtimeDto(acct.UserId, acct.CashAvailable, DateTimeOffset.UtcNow),
+            new FundsUpdatedRealtimeDto(trader.ExternalUserId!, trader.AvailableCash, DateTimeOffset.UtcNow),
             cancellationToken).ConfigureAwait(false);
     }
 }

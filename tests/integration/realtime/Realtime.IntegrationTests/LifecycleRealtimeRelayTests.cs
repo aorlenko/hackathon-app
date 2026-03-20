@@ -5,7 +5,7 @@ namespace Realtime.IntegrationTests;
 
 public sealed class LifecycleRealtimeRelayTests
 {
-    [Fact]
+    [Fact(Skip = "Equity sell orders disabled (pets-only); matching flow requires seller inventory.")]
     public async Task Relays_trade_and_settlement_updates_to_realtime_publisher()
     {
         var harness = new TradingPlatformHarness();

@@ -107,6 +107,7 @@ Query: optional `sort=createdAtDesc` (default).
   "breedName": "string",
   "askingPrice": 200.0,
   "sellerDisplayName": "string",
+  "sellerEmail": "string | null",
   "createdAt": "2026-03-20T12:00:00Z",
   "recentTradePriceForBreed": 150.0,
   "remainingNewSupplyForBreed": 3

@@ -190,7 +190,6 @@ const FundsHarness = ({ client }: { client: MarketHubClient }) => {
       displayName: "Buyer One",
       email: "user1@example.com",
       cashAvailable: 250000,
-      holdings: [{ symbol: "ABC", quantity: 10 }],
     },
     isAuthenticated: true,
     userId: "user-1",

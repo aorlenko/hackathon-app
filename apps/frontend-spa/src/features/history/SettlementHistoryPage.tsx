@@ -58,21 +58,20 @@ export const SettlementHistoryPage = () => {
   }, [auth.accessToken, auth.userId]);
 
   return (
-    <section className="stack">
-      <section className="card">
-        <h2>Settlement history</h2>
+    <div className="trading-pets-page">
+      <header className="trading-pets-page__header">
+        <h1>Settlement history</h1>
         <p className="muted">
           Monitor terminal settlement outcomes and lifecycle completion context.
         </p>
-      </section>
-      <section className="card">
-        {loading ? <p>Loading settlements...</p> : null}
-        {error ? <p className="error-text">{error}</p> : null}
-        {!loading && !error && settlements.length === 0 ? (
-          <p className="muted">No settlement history found for this user.</p>
-        ) : null}
-        {settlements.length > 0 ? (
-          <table className="data-table">
+      </header>
+      {loading ? <p className="trading-pets-loading">Loading settlements...</p> : null}
+      {error ? <p className="error-text">{error}</p> : null}
+      {!loading && !error && settlements.length === 0 ? (
+        <p className="muted">No settlement history found for this user.</p>
+      ) : null}
+      {settlements.length > 0 ? (
+        <table className="trading-pets-table">
             <thead>
               <tr>
                 <th>Started</th>
@@ -127,9 +126,8 @@ export const SettlementHistoryPage = () => {
                 );
               })}
             </tbody>
-          </table>
-        ) : null}
-      </section>
+        </table>
+      ) : null}
       <LifecycleTraceTable
         trades={trades}
         settlements={settlements}
@@ -137,6 +135,6 @@ export const SettlementHistoryPage = () => {
         currentUserId={auth.userId}
         currentUserEmail={auth.accountSnapshot?.email}
       />
-    </section>
+    </div>
   );
 };

@@ -2,6 +2,20 @@ import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { FundsPanel } from "./features/account/FundsPanel";
 import { useTradingAuth } from "./features/auth/AuthProvider";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
+
+/** Must not navigate away from `/` until Auth0 has consumed `?code=` / `?error=` on the callback URL. */
+const RootIndex = () => {
+  const auth = useTradingAuth();
+  if (auth.isLoading) {
+    return (
+      <section className="card">
+        <h2>Starting app</h2>
+        <p className="muted">Completing sign-in…</p>
+      </section>
+    );
+  }
+  return <Navigate to="/pets/workspace" replace />;
+};
 import { SettlementHistoryPage } from "./features/history/SettlementHistoryPage";
 import { TradeHistoryPage } from "./features/history/TradeHistoryPage";
 import {
@@ -19,10 +33,17 @@ export const Header = () => {
     <header className="app-header">
       <div className="app-header__top">
         <div className="app-header__brand">
-          <h1>Trading Lifecycle Demo</h1>
-          <p className="muted">Pet marketplace demo — primary supply, resale listings, and settlement history.</p>
+          <h1>Pet Ledger</h1>
+          <p className="muted">
+            Pet marketplace — primary supply, resale listings, and settlement history.
+          </p>
         </div>
         <div className="auth-panel">
+          {auth.authError ? (
+            <p className="trading-pets-error small" role="alert">
+              {auth.authError}
+            </p>
+          ) : null}
           {auth.isAuthenticated ? (
             <>
               <div className="auth-panel__summary">
@@ -65,7 +86,7 @@ export const App = () => {
       <Header />
       <main className="app-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/pets/workspace" replace />} />
+          <Route path="/" element={<RootIndex />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/history/trades" element={<TradeHistoryPage />} />
             <Route

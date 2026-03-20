@@ -22,6 +22,7 @@ const createAuthState = (
   displayName: "Buyer One",
   accessToken: "token",
   accountSnapshot: null,
+  authError: null,
   mode: "demo",
   login: vi.fn(async () => undefined),
   logout: vi.fn(),
@@ -64,7 +65,6 @@ describe("Header funds display", () => {
         displayName: "Buyer One",
         email: "user1@example.com",
         cashAvailable: 250000,
-        holdings: [{ symbol: "ABC", quantity: 10 }],
       },
       state: "confirmed",
     });

@@ -55,7 +55,6 @@ public sealed class MarketApiContractsTests
         Assert.Equal("OPEN", response.Response.Status);
         Assert.NotNull(account);
         Assert.True(account!.CashAvailable > 0);
-        Assert.Empty(account.Holdings);
     }
 
     [Fact]
@@ -82,7 +81,6 @@ public sealed class MarketApiContractsTests
         Assert.Equal("Bootstrap Trader", ok.Value.DisplayName);
         Assert.Equal("bootstrap@example.com", ok.Value.Email);
         Assert.NotNull(account);
-        Assert.Empty(account!.Holdings);
         Assert.Equal("Bootstrap Trader", account.DisplayName);
         Assert.Equal("bootstrap@example.com", account.Email);
     }
@@ -107,6 +105,5 @@ public sealed class MarketApiContractsTests
         Assert.Equal("Buyer One", ok.Value.DisplayName);
         Assert.Equal("user1@example.com", ok.Value.Email);
         Assert.True(ok.Value.CashAvailable > 0);
-        Assert.Contains(ok.Value.Holdings, holding => holding.Symbol == "ABC");
     }
 }

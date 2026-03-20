@@ -38,3 +38,6 @@ C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), Pow
 ## Implementation rules
 - Always consider using agents from ".cursor/agents/" folder when doing implementation of tasks
 <!-- MANUAL ADDITIONS END -->
+
+## Browser login
+Use the orlenko.andrew@gmail.com/Hack_1112 values for login to your built-in browser for testing.

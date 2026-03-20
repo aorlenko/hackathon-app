@@ -1,15 +1,19 @@
 using System.Security.Claims;
 using MarketService.Application.Accounts;
 using MarketService.Application.Abstractions;
+using MarketService.Application.Pets;
+using MarketService.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MarketService.Application.Consumers;
 using MarketService.Application.Matching;
 using MarketService.Application.Markets;
 using MarketService.Application.Orders;
 using MarketService.Application.Realtime;
 using MarketService.Infrastructure.Messaging;
-using MarketService.Infrastructure.Persistence;
 using MarketService.Infrastructure.Seeding;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using SettlementService.Application.Abstractions;
 using SettlementService.Application.Consumers;
 using SettlementService.Application.Queries;
@@ -48,6 +52,7 @@ public sealed class TradingPlatformHarness
     {
         MarketStore = new MarketDbContext(new DbContextOptionsBuilder<MarketDbContext>()
             .UseInMemoryDatabase($"market-{Guid.NewGuid():N}")
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options);
         TradeStore = new TradeDbContext(new DbContextOptionsBuilder<TradeDbContext>()
             .UseInMemoryDatabase($"trade-{Guid.NewGuid():N}")
@@ -57,6 +62,9 @@ public sealed class TradingPlatformHarness
             .Options);
 
         SeedDataRunner.SeedAsync(MarketStore).GetAwaiter().GetResult();
+        SeedDataRunner.EnsureLegacyEquityCatalogAsync(MarketStore).GetAwaiter().GetResult();
+        SeedDataRunner.EnsureTradingPetsSeedAsync(MarketStore, TradingPetsOptions.CreateForContractTestHarness())
+            .GetAwaiter().GetResult();
 
         var marketPublisher = new LifecycleEventPublisher(EventBus);
         var tradePublisher = new TradeRecordedPublisher(EventBus);
@@ -98,6 +106,13 @@ public sealed class TradingPlatformHarness
     {
         return GetCurrentAccount.HandleAsync(userId, cancellationToken);
     }
+
+    public MarketPetDataStore CreateMarketPetStore(TradingPetsOptions? options = null) =>
+        new(
+            MarketStore,
+            NullLogger<MarketPetDataStore>.Instance,
+            Options.Create(options ?? TradingPetsOptions.CreateForContractTestHarness()),
+            null);
 
     public static ClaimsPrincipal CreatePrincipal(string userId, string? displayName = null, string? email = null)
     {

@@ -22,6 +22,71 @@ namespace MarketService.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("MarketService.Domain.Entities.Bid", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("BuyerTraderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerTraderId");
+
+                    b.HasIndex("ListingId", "Status");
+
+                    b.ToTable("PetListingBids", (string)null);
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Breed", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("BaselineDesirability")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<decimal>("LifespanYears")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MaintenanceCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<decimal>("RetailPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PetBreeds", (string)null);
+                });
+
             modelBuilder.Entity("MarketService.Domain.Entities.Item", b =>
                 {
                     b.Property<Guid>("ItemId")
@@ -80,6 +145,85 @@ namespace MarketService.Infrastructure.Persistence.Migrations
                             ReferencePrice = 80m,
                             Symbol = "XYZ"
                         });
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Listing", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AskingPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("PetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SellerTraderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("SellerTraderId");
+
+                    b.HasIndex("PetId", "WithdrawnAt");
+
+                    b.ToTable("PetListings", (string)null);
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Correlation")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("CounterpartyDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("CounterpartyTraderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("PetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PetName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("TraderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TraderId", "CreatedAt");
+
+                    b.ToTable("PetNotifications", (string)null);
                 });
 
             modelBuilder.Entity("MarketService.Domain.Entities.Order", b =>
@@ -164,6 +308,125 @@ namespace MarketService.Infrastructure.Persistence.Migrations
                     b.HasKey("AuditId");
 
                     b.ToTable("OrderMatchAudits", (string)null);
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Pet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AgeYears")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<Guid>("BreedId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("CurrentDesirability")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Health")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsExpired")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OwnerTraderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BreedId");
+
+                    b.HasIndex("OwnerTraderId");
+
+                    b.ToTable("Pets", (string)null);
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Supply", b =>
+                {
+                    b.Property<Guid>("BreedId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RemainingCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("BreedId");
+
+                    b.ToTable("PetBreedSupply", (string)null);
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Trade", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BuyerTraderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ExecutedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("SellerTraderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerTraderId");
+
+                    b.HasIndex("ExecutedAt");
+
+                    b.HasIndex("ListingId");
+
+                    b.HasIndex("PetId");
+
+                    b.HasIndex("SellerTraderId");
+
+                    b.ToTable("PetTrades", (string)null);
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Trader", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AvailableCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ExternalUserId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("LockedCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalUserId");
+
+                    b.ToTable("PetTraders", (string)null);
                 });
 
             modelBuilder.Entity("MarketService.Infrastructure.Persistence.DemoAccountRecord", b =>
@@ -251,6 +514,120 @@ namespace MarketService.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MarketService.Domain.Entities.Bid", b =>
+                {
+                    b.HasOne("MarketService.Domain.Entities.Trader", "Buyer")
+                        .WithMany("BidsAsBuyer")
+                        .HasForeignKey("BuyerTraderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketService.Domain.Entities.Listing", "Listing")
+                        .WithMany("Bids")
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Buyer");
+
+                    b.Navigation("Listing");
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Listing", b =>
+                {
+                    b.HasOne("MarketService.Domain.Entities.Pet", "Pet")
+                        .WithMany()
+                        .HasForeignKey("PetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketService.Domain.Entities.Trader", "Seller")
+                        .WithMany("ListingsAsSeller")
+                        .HasForeignKey("SellerTraderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pet");
+
+                    b.Navigation("Seller");
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("MarketService.Domain.Entities.Trader", "Trader")
+                        .WithMany("Notifications")
+                        .HasForeignKey("TraderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trader");
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Pet", b =>
+                {
+                    b.HasOne("MarketService.Domain.Entities.Breed", "Breed")
+                        .WithMany("Pets")
+                        .HasForeignKey("BreedId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketService.Domain.Entities.Trader", "Owner")
+                        .WithMany("Pets")
+                        .HasForeignKey("OwnerTraderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Breed");
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Supply", b =>
+                {
+                    b.HasOne("MarketService.Domain.Entities.Breed", "Breed")
+                        .WithOne("Supply")
+                        .HasForeignKey("MarketService.Domain.Entities.Supply", "BreedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Breed");
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Trade", b =>
+                {
+                    b.HasOne("MarketService.Domain.Entities.Trader", "Buyer")
+                        .WithMany()
+                        .HasForeignKey("BuyerTraderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketService.Domain.Entities.Listing", "Listing")
+                        .WithMany("Trades")
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketService.Domain.Entities.Pet", "Pet")
+                        .WithMany()
+                        .HasForeignKey("PetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketService.Domain.Entities.Trader", "Seller")
+                        .WithMany()
+                        .HasForeignKey("SellerTraderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Buyer");
+
+                    b.Navigation("Listing");
+
+                    b.Navigation("Pet");
+
+                    b.Navigation("Seller");
+                });
+
             modelBuilder.Entity("MarketService.Infrastructure.Persistence.DemoHoldingRecord", b =>
                 {
                     b.HasOne("MarketService.Infrastructure.Persistence.DemoAccountRecord", null)
@@ -258,6 +635,31 @@ namespace MarketService.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Breed", b =>
+                {
+                    b.Navigation("Pets");
+
+                    b.Navigation("Supply");
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Listing", b =>
+                {
+                    b.Navigation("Bids");
+
+                    b.Navigation("Trades");
+                });
+
+            modelBuilder.Entity("MarketService.Domain.Entities.Trader", b =>
+                {
+                    b.Navigation("BidsAsBuyer");
+
+                    b.Navigation("ListingsAsSeller");
+
+                    b.Navigation("Notifications");
+
+                    b.Navigation("Pets");
                 });
 
             modelBuilder.Entity("MarketService.Infrastructure.Persistence.DemoAccountRecord", b =>

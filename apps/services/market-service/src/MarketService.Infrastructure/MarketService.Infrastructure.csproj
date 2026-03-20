@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MarketService.Domain\MarketService.Domain.csproj" />
     <ProjectReference Include="..\MarketService.Application\MarketService.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\..\libs\contracts\http\src\Trading.Contracts.Http\Trading.Contracts.Http.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\building-blocks\messaging\src\Trading.Messaging\Trading.Messaging.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\contracts\events\src\Trading.Contracts.Events\Trading.Contracts.Events.csproj" />
   </ItemGroup>

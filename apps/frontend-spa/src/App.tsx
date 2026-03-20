@@ -2,10 +2,15 @@ import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { FundsPanel } from "./features/account/FundsPanel";
 import { useTradingAuth } from "./features/auth/AuthProvider";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
-import { MarketDetailPage } from "./features/market/MarketDetailPage";
-import { MarketOverviewPage } from "./features/market/MarketOverviewPage";
 import { SettlementHistoryPage } from "./features/history/SettlementHistoryPage";
 import { TradeHistoryPage } from "./features/history/TradeHistoryPage";
+import {
+  LeaderboardPage,
+  MarketListingsPage,
+  MyPetTraderProvider,
+  PetAnalysisPage,
+  TraderWorkspacePage,
+} from "./features/trading-pets";
 
 export const Header = () => {
   const auth = useTradingAuth();
@@ -15,9 +20,7 @@ export const Header = () => {
       <div className="app-header__top">
         <div className="app-header__brand">
           <h1>Trading Lifecycle Demo</h1>
-          <p className="muted">
-            Order, trade, and settlement flows aligned to the platform contracts.
-          </p>
+          <p className="muted">Pet marketplace demo — primary supply, resale listings, and settlement history.</p>
         </div>
         <div className="auth-panel">
           {auth.isAuthenticated ? (
@@ -46,7 +49,9 @@ export const Header = () => {
         </div>
       </div>
       <nav className="nav-links" aria-label="Primary">
-        <NavLink to="/">Markets</NavLink>
+        <NavLink to="/pets/workspace">Pet trading</NavLink>
+        <NavLink to="/pets/market">Listings</NavLink>
+        <NavLink to="/pets/leaderboard">Leaderboard</NavLink>
         <NavLink to="/history/trades">Trade history</NavLink>
         <NavLink to="/history/settlements">Settlement history</NavLink>
       </nav>
@@ -60,16 +65,21 @@ export const App = () => {
       <Header />
       <main className="app-content">
         <Routes>
-          <Route path="/" element={<MarketOverviewPage />} />
+          <Route path="/" element={<Navigate to="/pets/workspace" replace />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/markets/:symbol" element={<MarketDetailPage />} />
             <Route path="/history/trades" element={<TradeHistoryPage />} />
             <Route
               path="/history/settlements"
               element={<SettlementHistoryPage />}
             />
+            <Route element={<MyPetTraderProvider />}>
+              <Route path="/pets/workspace" element={<TraderWorkspacePage />} />
+              <Route path="/pets/market" element={<MarketListingsPage />} />
+              <Route path="/pets/leaderboard" element={<LeaderboardPage />} />
+              <Route path="/pets/analysis/:petId" element={<PetAnalysisPage />} />
+            </Route>
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/pets/workspace" replace />} />
         </Routes>
       </main>
     </div>

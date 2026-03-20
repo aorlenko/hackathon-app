@@ -11,6 +11,9 @@ public interface IMarketHubPublisher
     Task PublishFundsUpdatedAsync(string userId, FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Legacy equity/settlement realtime paths. Trading pets uses <see cref="ITradingPetsRealtimePublisher"/> + SignalR groups on the same hub.
+/// </summary>
 public interface IMarketRealtimeNotifier
 {
     Task NotifyOrderBookUpdatedAsync(string symbol, CancellationToken cancellationToken = default);

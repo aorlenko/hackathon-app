@@ -16,6 +16,24 @@ public sealed class MarketHub : Hub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, TradesGroup(symbol)).ConfigureAwait(false);
     }
 
+    public Task SubscribeTradingPetsTrader(Guid traderId) =>
+        Groups.AddToGroupAsync(Context.ConnectionId, TradingPetsTraderGroup(traderId));
+
+    public Task UnsubscribeTradingPetsTrader(Guid traderId) =>
+        Groups.RemoveFromGroupAsync(Context.ConnectionId, TradingPetsTraderGroup(traderId));
+
+    public Task SubscribeTradingPetsMarket() =>
+        Groups.AddToGroupAsync(Context.ConnectionId, TradingPetsMarketGroup);
+
+    public Task SubscribeTradingPetsLeaderboard() =>
+        Groups.AddToGroupAsync(Context.ConnectionId, TradingPetsLeaderboardGroup);
+
+    public static string TradingPetsTraderGroup(Guid traderId) => $"tp:trader:{traderId:D}";
+
+    public const string TradingPetsMarketGroup = "tp:market";
+
+    public const string TradingPetsLeaderboardGroup = "tp:leaderboard";
+
     public override async Task OnConnectedAsync()
     {
         var userId = Context.User?.FindFirst("sub")?.Value ?? Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;

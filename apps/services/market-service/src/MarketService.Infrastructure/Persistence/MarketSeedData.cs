@@ -80,9 +80,5 @@ internal static class MarketSeedData
         }
     ];
 
-    public static readonly (string Symbol, int Quantity)[] AutoProvisionedHoldings =
-    [
-        ("ABC", 50),
-        ("XYZ", 25)
-    ];
+    public static readonly (string Symbol, int Quantity)[] AutoProvisionedHoldings = [];
 }

@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MarketService.Domain\MarketService.Domain.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\building-blocks\messaging\src\Trading.Messaging\Trading.Messaging.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\contracts\http\src\Trading.Contracts.Http\Trading.Contracts.Http.csproj" />

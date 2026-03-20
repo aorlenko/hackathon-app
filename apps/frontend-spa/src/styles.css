@@ -1,10 +1,17 @@
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", sans-serif;
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: #111827;
-  background: #f3f4f6;
+  background: #eef1f4;
+  --tp-surface: #ffffff;
+  --tp-ink: #0f172a;
+  --tp-muted: #64748b;
+  --tp-accent: #0d9488;
+  --tp-accent-dim: #ccfbf1;
+  --tp-border: #e2e8f0;
+  --tp-shadow: 0 10px 40px -12px rgb(15 23 42 / 0.12);
 }
 
 * {
@@ -54,6 +61,12 @@ select {
 .app-header__brand h1,
 .app-header__brand p {
   margin: 0;
+}
+
+.app-header__brand h1 {
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .nav-links {
@@ -358,4 +371,216 @@ select {
   .timeline-meta {
     text-align: left;
   }
+}
+
+.trading-pets-workspace,
+.trading-pets-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 0.25rem;
+}
+
+.trading-pets-page--centered {
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+  text-align: center;
+  gap: 1rem;
+}
+
+.trading-pets-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 45%, #e0f2fe 100%);
+  border: 1px solid var(--tp-border);
+  box-shadow: var(--tp-shadow);
+}
+
+.trading-pets-hero h1 {
+  margin: 0;
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: var(--tp-ink);
+  letter-spacing: -0.02em;
+}
+
+.trading-pets-hero__lede {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--tp-muted);
+  font-size: 1.05rem;
+}
+
+.trading-pets-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--tp-border);
+  border-radius: 14px;
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+}
+
+.trading-pets-summary strong {
+  color: var(--tp-accent);
+  font-size: 1.15rem;
+}
+
+.trading-pets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.trading-pets-card {
+  border: 1px solid var(--tp-border);
+  border-radius: 14px;
+  padding: 1.15rem;
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trading-pets-card h2 {
+  margin: 0;
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--tp-ink);
+}
+
+.trading-pets-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.trading-pets-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trading-pets-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.trading-pets-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.trading-pets-field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.trading-pets-field input,
+.trading-pets-field select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--tp-border);
+  background: #f8fafc;
+  color: var(--tp-ink);
+}
+
+.trading-pets-subheading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.trading-pets-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.trading-pets-list--market li {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.trading-pets-empty {
+  padding: 0.75rem 0;
+  color: var(--tp-muted);
+  font-style: italic;
+}
+
+.trading-pets-loading {
+  margin: 0;
+}
+
+.trading-pets-inline {
+  margin-top: 0.35rem;
+}
+
+.trading-pets-seller-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.trading-pets-notifications {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.trading-pets-notifications__title {
+  font-weight: 600;
+}
+
+.trading-pets-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.trading-pets-table th,
+.trading-pets-table td {
+  text-align: left;
+  padding: 0.5rem 0.35rem;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.trading-pets-pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.trading-pets-error {
+  color: #b91c1c;
+  margin: 0;
+}
+
+.trading-pets-page__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }

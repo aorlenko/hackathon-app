@@ -17,6 +17,14 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
     public DbSet<OrderMatchAudit> Audits => Set<OrderMatchAudit>();
     public DbSet<DemoAccountRecord> Accounts => Set<DemoAccountRecord>();
     public DbSet<DemoHoldingRecord> Holdings => Set<DemoHoldingRecord>();
+    public DbSet<Trader> Traders => Set<Trader>();
+    public DbSet<Breed> Breeds => Set<Breed>();
+    public DbSet<Supply> Supplies => Set<Supply>();
+    public DbSet<Pet> Pets => Set<Pet>();
+    public DbSet<Listing> Listings => Set<Listing>();
+    public DbSet<Bid> Bids => Set<Bid>();
+    public DbSet<Trade> Trades => Set<Trade>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     public void AddOrder(Order order) => Orders.Add(order);
 
@@ -292,6 +300,130 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.UserId).HasMaxLength(128);
             entity.Property(x => x.Symbol).HasMaxLength(32);
             entity.HasData(MarketSeedData.Holdings);
+        });
+
+        modelBuilder.Entity<Trader>(entity =>
+        {
+            entity.ToTable("PetTraders");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.DisplayName).HasMaxLength(256);
+            entity.Property(x => x.ExternalUserId).HasMaxLength(256);
+            entity.Property(x => x.AvailableCash).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.LockedCash).HasColumnType("decimal(18,2)");
+            entity.HasIndex(x => x.ExternalUserId);
+        });
+
+        modelBuilder.Entity<Breed>(entity =>
+        {
+            entity.ToTable("PetBreeds");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(128);
+            entity.Property(x => x.Category).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.LifespanYears).HasColumnType("decimal(18,4)");
+            entity.Property(x => x.MaintenanceCost).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.RetailPrice).HasColumnType("decimal(18,2)");
+        });
+
+        modelBuilder.Entity<Supply>(entity =>
+        {
+            entity.ToTable("PetBreedSupply");
+            entity.HasKey(x => x.BreedId);
+            entity.HasOne(x => x.Breed)
+                .WithOne(x => x.Supply)
+                .HasForeignKey<Supply>(x => x.BreedId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Pet>(entity =>
+        {
+            entity.ToTable("Pets");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.AgeYears).HasColumnType("decimal(18,6)");
+            entity.Property(x => x.Health).HasColumnType("decimal(18,2)");
+            entity.HasOne(x => x.Breed)
+                .WithMany(x => x.Pets)
+                .HasForeignKey(x => x.BreedId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Owner)
+                .WithMany(x => x.Pets)
+                .HasForeignKey(x => x.OwnerTraderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.OwnerTraderId);
+            entity.HasIndex(x => x.BreedId);
+        });
+
+        modelBuilder.Entity<Listing>(entity =>
+        {
+            entity.ToTable("PetListings");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.AskingPrice).HasColumnType("decimal(18,2)");
+            entity.HasOne(x => x.Pet)
+                .WithMany()
+                .HasForeignKey(x => x.PetId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Seller)
+                .WithMany(x => x.ListingsAsSeller)
+                .HasForeignKey(x => x.SellerTraderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.PetId, x.WithdrawnAt });
+            entity.HasIndex(x => x.CreatedAt);
+        });
+
+        modelBuilder.Entity<Bid>(entity =>
+        {
+            entity.ToTable("PetListingBids");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+            entity.HasOne(x => x.Listing)
+                .WithMany(x => x.Bids)
+                .HasForeignKey(x => x.ListingId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Buyer)
+                .WithMany(x => x.BidsAsBuyer)
+                .HasForeignKey(x => x.BuyerTraderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.ListingId, x.Status });
+        });
+
+        modelBuilder.Entity<Trade>(entity =>
+        {
+            entity.ToTable("PetTrades");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Price).HasColumnType("decimal(18,2)");
+            entity.HasOne(x => x.Pet)
+                .WithMany()
+                .HasForeignKey(x => x.PetId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Listing)
+                .WithMany(x => x.Trades)
+                .HasForeignKey(x => x.ListingId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Buyer)
+                .WithMany()
+                .HasForeignKey(x => x.BuyerTraderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Seller)
+                .WithMany()
+                .HasForeignKey(x => x.SellerTraderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.ExecutedAt);
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("PetNotifications");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.PetName).HasMaxLength(256);
+            entity.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.CounterpartyDisplayName).HasMaxLength(256);
+            entity.Property(x => x.Correlation).HasMaxLength(128);
+            entity.HasOne(x => x.Trader)
+                .WithMany(x => x.Notifications)
+                .HasForeignKey(x => x.TraderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => new { x.TraderId, x.CreatedAt });
         });
     }
 }

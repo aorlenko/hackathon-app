@@ -1,3 +1,5 @@
+using MarketService.Application.Pets.Terminal;
+
 namespace MarketService.Application.Abstractions;
 
 public interface IMarketPetStore
@@ -28,6 +30,13 @@ public interface IMarketPetStore
 
     Task<IReadOnlyList<MarketListingRow>> GetMarketListingsAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<TerminalMarketRow>> GetTerminalMarketsAsync(CancellationToken cancellationToken = default);
+
+    Task<TerminalWorkspaceSnapshot?> GetTerminalWorkspaceAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        CancellationToken cancellationToken = default);
+
     Task<Guid?> CreateListingAsync(Guid traderId, Guid petId, decimal askingPrice, CancellationToken cancellationToken = default);
 
     Task<bool> WithdrawListingAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default);
@@ -39,6 +48,26 @@ public interface IMarketPetStore
     Task<TradeResultRow?> AcceptBidAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default);
 
     Task<bool> RejectBidAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default);
+
+    Task<TerminalOrderResult?> PlaceTerminalBidAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        int quantity,
+        decimal limitPrice,
+        CancellationToken cancellationToken = default);
+
+    Task<TerminalOrderResult?> PlaceTerminalAskAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        int quantity,
+        decimal limitPrice,
+        CancellationToken cancellationToken = default);
+
+    Task<TerminalOrderResult?> BuyNowAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        int quantity,
+        CancellationToken cancellationToken = default);
 
     Task<PetAnalysisRow?> GetPetAnalysisAsync(Guid petId, Guid? viewerTraderId, CancellationToken cancellationToken = default);
 

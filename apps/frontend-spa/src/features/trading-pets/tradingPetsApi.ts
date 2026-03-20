@@ -215,3 +215,67 @@ export const getNotifications = (
     `${env.marketApiBaseUrl}/api/traders/${traderId}/notifications?limit=${limit}`,
     { headers: createHeaders(accessToken), cache: "no-store" },
   );
+
+/** Terminal workspace — market row (list + workspace header). */
+export type TerminalMarketRowDto = {
+  marketEntryId: string;
+  displayName: string;
+  currentSupply: number;
+  latestTradePrice: number | null;
+  bestBidPrice: number | null;
+  bestAskPrice: number | null;
+  trendDirection: string;
+  lastTradeAt: string | null;
+};
+
+export type TerminalOrderBookLevelDto = {
+  price: number;
+  quantity: number;
+  orderCount: number;
+};
+
+export type TerminalOrderBookDto = {
+  capturedAt: string;
+  bids: TerminalOrderBookLevelDto[];
+  asks: TerminalOrderBookLevelDto[];
+};
+
+export type TerminalAccountSummaryDto = {
+  displayName: string;
+  availableCash: number;
+  lockedCash: number;
+  portfolioTotal: number;
+  ownedQuantity: number;
+  eligibleAskQuantity: number;
+};
+
+export type TerminalRecentTradeDto = {
+  tradeId: string;
+  price: number;
+  quantity: number;
+  executedAt: string;
+  executionType: string;
+};
+
+export type TerminalWorkspaceDto = {
+  marketEntry: TerminalMarketRowDto;
+  orderBook: TerminalOrderBookDto;
+  accountSummary: TerminalAccountSummaryDto;
+  recentTrades: TerminalRecentTradeDto[];
+  lastUpdatedAt: string;
+};
+
+export const getTerminalMarkets = (accessToken?: string) =>
+  fetchJson<TerminalMarketRowDto[]>(
+    `${env.marketApiBaseUrl}/api/pets/terminal/markets`,
+    { headers: createHeaders(accessToken), cache: "no-store" },
+  );
+
+export const getTerminalWorkspace = (
+  marketEntryId: string,
+  accessToken?: string,
+) =>
+  fetchJson<TerminalWorkspaceDto>(
+    `${env.marketApiBaseUrl}/api/pets/terminal/workspace/${encodeURIComponent(marketEntryId)}`,
+    { headers: createHeaders(accessToken), cache: "no-store" },
+  );

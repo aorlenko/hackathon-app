@@ -639,3 +639,105 @@ select {
   flex-shrink: 0;
   align-self: flex-start;
 }
+
+/* Pet trading terminal (workspace) */
+.trading-pets-workspace--terminal {
+  max-width: 1400px;
+}
+
+.trading-pets-terminal {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(240px, 300px);
+  grid-template-rows: minmax(280px, 1fr) auto;
+  grid-template-areas:
+    "markets book panel"
+    "tape tape tape";
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.trading-pets-terminal__markets {
+  grid-area: markets;
+}
+
+.trading-pets-terminal__book {
+  grid-area: book;
+  min-width: 0;
+}
+
+.trading-pets-terminal__panel {
+  grid-area: panel;
+}
+
+.trading-pets-terminal__tape {
+  grid-area: tape;
+}
+
+.trading-pets-terminal__scroll {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.trading-pets-terminal__tape-list {
+  max-height: 200px;
+}
+
+.trading-pets-terminal__market-row {
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  margin: 0 -0.35rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.trading-pets-terminal__market-row:hover {
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.trading-pets-terminal__market-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.trading-pets-terminal__market-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.trading-pets-terminal__book-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.trading-pets-terminal__tape-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.trading-pets-terminal__account {
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .trading-pets-terminal {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "markets"
+      "book"
+      "panel"
+      "tape";
+  }
+}

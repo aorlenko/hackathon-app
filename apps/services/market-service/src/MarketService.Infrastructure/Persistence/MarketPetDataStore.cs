@@ -1,5 +1,6 @@
 using MarketService.Application.Abstractions;
 using MarketService.Application.Pets;
+using MarketService.Application.Pets.Terminal;
 using MarketService.Application.Realtime;
 using MarketService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -332,6 +333,161 @@ public sealed class MarketPetDataStore : IMarketPetStore
             .ToList();
     }
 
+    public async Task<IReadOnlyList<TerminalMarketRow>> GetTerminalMarketsAsync(CancellationToken cancellationToken = default)
+    {
+        var breeds = await _db.Breeds
+            .AsNoTracking()
+            .Include(b => b.Supply)
+            .OrderBy(b => b.Name)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var marketData = await BuildTerminalMarketDataAsync(cancellationToken).ConfigureAwait(false);
+
+        return breeds
+            .Select(breed =>
+            {
+                marketData.TryGetValue(breed.Id, out var projection);
+                return new TerminalMarketRow(
+                    breed.Id,
+                    breed.Name,
+                    breed.Supply?.RemainingCount ?? 0,
+                    projection?.LatestTradePrice,
+                    projection?.BestBidPrice,
+                    projection?.BestAskPrice,
+                    projection?.TrendDirection ?? TerminalTrendDirection.NoTradeData,
+                    projection?.LastTradeAt);
+            })
+            .ToList();
+    }
+
+    public async Task<TerminalWorkspaceSnapshot?> GetTerminalWorkspaceAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        CancellationToken cancellationToken = default)
+    {
+        var trader = await _db.Traders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == traderId, cancellationToken)
+            .ConfigureAwait(false);
+        if (trader is null)
+        {
+            return null;
+        }
+
+        var marketEntry = (await GetTerminalMarketsAsync(cancellationToken).ConfigureAwait(false))
+            .FirstOrDefault(row => row.MarketEntryId == marketEntryId);
+        if (marketEntry is null)
+        {
+            return null;
+        }
+
+        var activeListings = await _db.Listings
+            .AsNoTracking()
+            .Include(l => l.Pet)
+            .Where(l => l.WithdrawnAt == null && l.Pet != null && l.Pet.BreedId == marketEntryId)
+            .OrderBy(l => l.AskingPrice)
+            .ThenBy(l => l.CreatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var activeBids = await _db.Bids
+            .AsNoTracking()
+            .Include(b => b.Listing!)
+            .ThenInclude(l => l!.Pet)
+            .Where(b =>
+                b.Status == BidStatus.Active &&
+                b.Listing != null &&
+                b.Listing.WithdrawnAt == null &&
+                b.Listing.Pet != null &&
+                b.Listing.Pet.BreedId == marketEntryId &&
+                b.Amount < b.Listing.AskingPrice)
+            .OrderByDescending(b => b.Amount)
+            .ThenBy(b => b.CreatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var ownedQuantity = await _db.Pets
+            .AsNoTracking()
+            .Where(p => p.OwnerTraderId == traderId && p.BreedId == marketEntryId)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var eligibleAskQuantity = await _db.Pets
+            .AsNoTracking()
+            .Where(p =>
+                p.OwnerTraderId == traderId &&
+                p.BreedId == marketEntryId &&
+                !_db.Listings.Any(l => l.PetId == p.Id && l.WithdrawnAt == null))
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var traderSnapshot = await GetTraderSnapshotAsync(traderId, cancellationToken).ConfigureAwait(false);
+        if (traderSnapshot is null)
+        {
+            return null;
+        }
+
+        var tradeEntities = await _db.Trades
+            .AsNoTracking()
+            .Include(t => t.Pet)
+            .Include(t => t.Listing)
+            .Where(t => t.Pet != null && t.Pet.BreedId == marketEntryId)
+            .OrderByDescending(t => t.ExecutedAt)
+            .Take(50)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var recentTrades = tradeEntities
+            .Select(t => new TerminalTradeRow(
+                t.Id,
+                marketEntryId,
+                t.Price,
+                1,
+                t.ExecutedAt,
+                ClassifyTerminalExecutionType(t)))
+            .ToList();
+
+        var capturedAt = DateTimeOffset.UtcNow;
+        var orderBook = new TerminalOrderBookSnapshot(
+            marketEntryId,
+            activeBids
+                .GroupBy(b => b.Amount)
+                .OrderByDescending(group => group.Key)
+                .Select(group => new TerminalOrderBookLevel(
+                    group.Key,
+                    group.Count(),
+                    group.Count(),
+                    group.Min(b => b.CreatedAt)))
+                .ToList(),
+            activeListings
+                .GroupBy(l => l.AskingPrice)
+                .OrderBy(group => group.Key)
+                .Select(group => new TerminalOrderBookLevel(
+                    group.Key,
+                    group.Count(),
+                    group.Count(),
+                    group.Min(l => l.CreatedAt)))
+                .ToList(),
+            capturedAt);
+
+        var accountSummary = new TerminalAccountSummary(
+            traderSnapshot.TraderId,
+            traderSnapshot.DisplayName,
+            traderSnapshot.AvailableCash,
+            traderSnapshot.LockedCash,
+            traderSnapshot.PortfolioTotal,
+            ownedQuantity,
+            eligibleAskQuantity);
+
+        return new TerminalWorkspaceSnapshot(
+            marketEntry,
+            orderBook,
+            accountSummary,
+            recentTrades,
+            capturedAt);
+    }
+
     public async Task<Guid?> CreateListingAsync(
         Guid traderId,
         Guid petId,
@@ -618,6 +774,35 @@ public sealed class MarketPetDataStore : IMarketPetStore
         return true;
     }
 
+    public Task<TerminalOrderResult?> PlaceTerminalBidAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        int quantity,
+        decimal limitPrice,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<TerminalOrderResult?>(null);
+    }
+
+    public Task<TerminalOrderResult?> PlaceTerminalAskAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        int quantity,
+        decimal limitPrice,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<TerminalOrderResult?>(null);
+    }
+
+    public Task<TerminalOrderResult?> BuyNowAsync(
+        Guid traderId,
+        Guid marketEntryId,
+        int quantity,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<TerminalOrderResult?>(null);
+    }
+
     public async Task<PetAnalysisRow?> GetPetAnalysisAsync(
         Guid petId,
         Guid? viewerTraderId,
@@ -750,6 +935,96 @@ public sealed class MarketPetDataStore : IMarketPetStore
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("Trading pets valuation tick updated {Count} pets.", affected.Count);
         return affected;
+    }
+
+    private async Task<Dictionary<Guid, TerminalMarketProjection>> BuildTerminalMarketDataAsync(
+        CancellationToken cancellationToken)
+    {
+        var activeListings = await _db.Listings
+            .AsNoTracking()
+            .Include(l => l.Pet)
+            .Where(l => l.WithdrawnAt == null && l.Pet != null)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var activeBids = await _db.Bids
+            .AsNoTracking()
+            .Include(b => b.Listing!)
+            .ThenInclude(l => l!.Pet)
+            .Where(b =>
+                b.Status == BidStatus.Active &&
+                b.Listing != null &&
+                b.Listing.WithdrawnAt == null &&
+                b.Listing.Pet != null &&
+                b.Amount < b.Listing.AskingPrice)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var trades = await _db.Trades
+            .AsNoTracking()
+            .Include(t => t.Pet)
+            .Where(t => t.Pet != null)
+            .OrderByDescending(t => t.ExecutedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var bestAskByBreed = activeListings
+            .GroupBy(l => l.Pet!.BreedId)
+            .ToDictionary(group => group.Key, group => (decimal?)group.Min(l => l.AskingPrice));
+
+        var bestBidByBreed = activeBids
+            .GroupBy(b => b.Listing!.Pet!.BreedId)
+            .ToDictionary(group => group.Key, group => (decimal?)group.Max(b => b.Amount));
+
+        var result = new Dictionary<Guid, TerminalMarketProjection>();
+        foreach (var tradeGroup in trades.GroupBy(t => t.Pet!.BreedId))
+        {
+            var orderedTrades = tradeGroup.OrderByDescending(t => t.ExecutedAt).ToList();
+            var latest = orderedTrades[0];
+            var previous = orderedTrades.Count > 1 ? orderedTrades[1] : null;
+            var trendDirection = previous is null
+                ? TerminalTrendDirection.Flat
+                : latest.Price > previous.Price
+                    ? TerminalTrendDirection.Up
+                    : latest.Price < previous.Price
+                        ? TerminalTrendDirection.Down
+                        : TerminalTrendDirection.Flat;
+
+            result[tradeGroup.Key] = new TerminalMarketProjection(
+                latest.Price,
+                bestBidByBreed.GetValueOrDefault(tradeGroup.Key),
+                bestAskByBreed.GetValueOrDefault(tradeGroup.Key),
+                trendDirection,
+                latest.ExecutedAt);
+        }
+
+        foreach (var pair in bestAskByBreed)
+        {
+            if (!result.ContainsKey(pair.Key))
+            {
+                result[pair.Key] = new TerminalMarketProjection(
+                    null,
+                    bestBidByBreed.GetValueOrDefault(pair.Key),
+                    pair.Value,
+                    TerminalTrendDirection.NoTradeData,
+                    null);
+            }
+        }
+
+        foreach (var pair in bestBidByBreed)
+        {
+            if (!result.ContainsKey(pair.Key))
+            {
+                result[pair.Key] = new TerminalMarketProjection(
+                    null,
+                    pair.Value,
+                    bestAskByBreed.GetValueOrDefault(pair.Key),
+                    TerminalTrendDirection.NoTradeData,
+                    null);
+            }
+        }
+
+        return result;
     }
 
     private async Task<Dictionary<Guid, decimal>> GetRecentTradePricesByBreedAsync(
@@ -1147,5 +1422,22 @@ public sealed class MarketPetDataStore : IMarketPetStore
         await _fundsRealtime.NotifyFundsUpdatedAsync(
             new FundsUpdatedRealtimeDto(trader.ExternalUserId!, trader.AvailableCash, DateTimeOffset.UtcNow),
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private sealed record TerminalMarketProjection(
+        decimal? LatestTradePrice,
+        decimal? BestBidPrice,
+        decimal? BestAskPrice,
+        TerminalTrendDirection TrendDirection,
+        DateTimeOffset? LastTradeAt);
+
+    private static string ClassifyTerminalExecutionType(Trade t)
+    {
+        if (t.Listing is null)
+        {
+            return "SecondaryMarket";
+        }
+
+        return t.Price >= t.Listing.AskingPrice ? "BuyNow" : "BidAccept";
     }
 }

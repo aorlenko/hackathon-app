@@ -48,7 +48,8 @@ var sqlServerName = 'sql-${namePrefix}-${uniqueString(resourceGroup().id)}'
 var sqlDatabaseName = '${projectName}-${environmentName}'
 var serviceBusNamespaceName = 'sb-${namePrefix}-${uniqueString(resourceGroup().id)}'
 var serviceBusTopicName = 'trading.lifecycle'
-var keyVaultName = 'kv-${environmentName}-${uniqueString(resourceGroup().id)}'
+// Key Vault names: 3–24 chars, alphanumeric + single hyphens, no consecutive hyphens; kv-{env}-{hash} exceeded 24 for long env names.
+var keyVaultName = 'kv-${uniqueString(resourceGroup().id, projectName, environmentName)}'
 var containerAppEnvironmentName = 'cae-${namePrefix}'
 // Container Apps resource names: max 32 chars; long prefixes (e.g. settlement-service) exceed limit with project+env.
 var frontendAppName = 'fe-${namePrefix}'

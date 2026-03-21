@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MarketService.Application.Abstractions;
+using MarketService.Application.Accounts;
 using MarketService.Application.Authorization;
 using MarketService.Application.Market;
 using MarketService.Application.Realtime;
@@ -62,7 +63,7 @@ public static class MarketTradingEndpoints
                 ?? httpContext.User.FindFirst(ClaimTypes.Name)?.Value
                 ?? httpContext.User.FindFirst("email")?.Value
                 ?? sub;
-            var email = CurrentUserProfileReader.TryGetEmailClaim(httpContext.User);
+            var email = UserEmailClaimResolver.TryResolve(httpContext.User);
             viewerTraderId = await store
                 .EnsureLinkedTraderForUserAsync(sub, displayName, email, cancellationToken)
                 .ConfigureAwait(false);

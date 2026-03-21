@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMyPetTrader } from "./MyPetTraderContext";
-import { formatShortPetId } from "./petDisplayUtils";
+import { formatPetAgeYearsMonths, formatShortPetId } from "./petDisplayUtils";
 
 export const MyPetsPage = () => {
   const { snapshot } = useMyPetTrader();
@@ -39,7 +39,16 @@ export const MyPetsPage = () => {
             </li>
           ) : (
             pets.map((p) => (
-              <li key={p.id} className="trading-pets-owned-row trading-pets-owned-row--readonly">
+              <li
+                key={p.id}
+                className={[
+                  "trading-pets-owned-row",
+                  "trading-pets-owned-row--readonly",
+                  p.isExpired ? "trading-pets-owned-row--expired" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
                 <div className="trading-pets-owned-row__media">
                   {p.breedImageUrl ? (
                     <img
@@ -59,17 +68,19 @@ export const MyPetsPage = () => {
                   )}
                 </div>
                 <div className="trading-pets-owned-row__main">
-                  <div>
+                  <div className="trading-pets-owned-row__title-line">
                     <strong>{p.breedName}</strong>
                     <span className="muted small"> · Pet ID {formatShortPetId(p.id)}</span>
+                    {p.isExpired ? (
+                      <span className="trading-pets-owned-row__expired-badge">Expired</span>
+                    ) : null}
                   </div>
                   <div className="muted small">
-                    Age {p.ageYears.toFixed(2)}y · health {p.health.toFixed(0)}% · desirability{" "}
+                    Age {formatPetAgeYearsMonths(p.ageYears)} · health {p.health.toFixed(0)}% · desirability{" "}
                     {p.currentDesirability}
                   </div>
                   <div className="muted small">
                     Intrinsic ${p.intrinsicValue.toFixed(2)} · maintenance ${p.maintenanceCost.toFixed(2)}
-                    {p.isExpired ? " · expired" : ""}
                   </div>
                   <div className="trading-pets-owned-row__analysis">
                     <Link className="trading-pets-text-link" to={`/pets/analysis/${p.id}`}>

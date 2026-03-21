@@ -6,16 +6,9 @@ namespace MarketService.Api.Endpoints;
 
 internal static class CurrentUserProfileReader
 {
-    /// <summary>
-    /// Raw email from bearer claims, or null when the access token does not carry an email claim.
-    /// Do not substitute a placeholder here — that breaks bootstrap fallbacks (request body vs JWT).
-    /// </summary>
-    public static string? TryGetEmailClaim(ClaimsPrincipal user)
-    {
-        var v = user.FindFirst("email")?.Value
-            ?? user.FindFirst(ClaimTypes.Email)?.Value;
-        return string.IsNullOrWhiteSpace(v) ? null : v.Trim();
-    }
+    /// <inheritdoc cref="UserEmailClaimResolver.TryStrictEmailClaim" />
+    public static string? TryGetEmailClaim(ClaimsPrincipal user) =>
+        UserEmailClaimResolver.TryStrictEmailClaim(user);
 
     public static MarketUserProfile? Read(ClaimsPrincipal user)
     {
@@ -25,15 +18,16 @@ internal static class CurrentUserProfileReader
             return null;
         }
 
+        var email = UserEmailClaimResolver.TryResolve(user);
+
         var displayName = MarketUserIdentityDefaults.NormalizeDisplayName(
             user.FindFirst("name")?.Value
             ?? user.FindFirst(ClaimTypes.Name)?.Value
             ?? user.FindFirst("nickname")?.Value
             ?? user.FindFirst("preferred_username")?.Value
-            ?? TryGetEmailClaim(user)
+            ?? email
             ?? userId,
             userId);
-        var email = TryGetEmailClaim(user);
 
         return new MarketUserProfile(userId, displayName, email);
     }

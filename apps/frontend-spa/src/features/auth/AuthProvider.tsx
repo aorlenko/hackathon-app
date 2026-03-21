@@ -59,6 +59,8 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
   const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
   /** Avoid duplicate bootstraps, but allow a second call when `user.email` arrives after the first (fixes placeholder trader-*@demo.local). */
   const lastSuccessfulBootstrapKeyRef = useRef<string | null>(null);
+  /** Ignore stale bootstrap responses when deps change while a request is in flight (out-of-order completion left nonsense emails on the account row). */
+  const bootstrapSeqRef = useRef(0);
 
   const login = useCallback(async () => {
     const options: RedirectLoginOptions<AppState> = {
@@ -127,51 +129,72 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
     }
 
     const userId = auth0.user?.sub ?? null;
-    const email = auth0.user?.email?.trim() ?? "";
 
     if (auth0.isLoading || !accessToken || !userId) {
       setIsBootstrappingAccount(false);
       return;
     }
 
-    const bootstrapKey = `${userId}\0${email}`;
-    if (lastSuccessfulBootstrapKeyRef.current === bootstrapKey) {
-      return;
-    }
-
+    const seq = ++bootstrapSeqRef.current;
     let active = true;
     setAccountSnapshot((current) =>
       current?.userId === userId ? current : null,
     );
     setIsBootstrappingAccount(true);
 
-    void bootstrapDemoAccount(
-      {
-        displayName: pickFriendlyDisplayName(auth0.user),
-        email: email || undefined,
-      },
-      accessToken,
-    )
-      .then((snapshot) => {
-        if (active) {
-          setAccountSnapshot(snapshot);
-          lastSuccessfulBootstrapKeyRef.current = bootstrapKey;
+    void (async () => {
+      let email = auth0.user?.email?.trim() ?? "";
+      if (!email) {
+        try {
+          const claims = await auth0.getIdTokenClaims();
+          const fromClaims =
+            typeof claims?.email === "string" ? claims.email.trim() : "";
+          if (fromClaims) {
+            email = fromClaims;
+          }
+        } catch {
+          /* ID token not ready yet; a later effect run may pick up email */
         }
-      })
-      .catch((error: unknown) => {
+      }
+
+      if (!active || seq !== bootstrapSeqRef.current) {
+        return;
+      }
+
+      const bootstrapKey = `${userId}\0${email}`;
+      if (lastSuccessfulBootstrapKeyRef.current === bootstrapKey) {
+        setIsBootstrappingAccount(false);
+        return;
+      }
+
+      try {
+        const snapshot = await bootstrapDemoAccount(
+          {
+            displayName: pickFriendlyDisplayName(auth0.user),
+            email: email || undefined,
+          },
+          accessToken,
+        );
+        if (!active || seq !== bootstrapSeqRef.current) {
+          return;
+        }
+        setAccountSnapshot(snapshot);
+        lastSuccessfulBootstrapKeyRef.current = bootstrapKey;
+      } catch (error: unknown) {
         console.error("Failed to bootstrap demo trading account.", error);
-      })
-      .finally(() => {
-        if (active) {
+      } finally {
+        if (active && seq === bootstrapSeqRef.current) {
           setIsBootstrappingAccount(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;
     };
   }, [
     accessToken,
+    auth0,
     auth0.isAuthenticated,
     auth0.isLoading,
     auth0.user,

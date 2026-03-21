@@ -83,4 +83,27 @@ describe("MyPetsPage", () => {
     const img = screen.getByRole("img", { name: /beagle \(breed reference\)/i });
     expect(img).toHaveAttribute("src", "https://example.com/beagle.jpg");
   });
+
+  it("marks expired pets with a badge and row styling", () => {
+    mockUseMyPetTrader.mockReturnValue({
+      traderId: snapshot.traderId,
+      snapshot: {
+        ...snapshot,
+        pets: [{ ...snapshot.pets[0], isExpired: true }],
+      },
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+      hubInvalidateSeq: 0,
+    });
+    render(
+      <MemoryRouter>
+        <MyPetsPage />
+      </MemoryRouter>,
+    );
+    const region = screen.getByRole("region", { name: /your inventory/i });
+    expect(within(region).getByText("Expired")).toBeInTheDocument();
+    const row = within(region).getByText(/Test Breed/).closest("li");
+    expect(row).toHaveClass("trading-pets-owned-row--expired");
+  });
 });

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MarketService.Application.Abstractions;
+using MarketService.Application.Accounts;
 using MarketService.Application.Authorization;
 using MarketService.Application.Pets;
 
@@ -32,7 +33,7 @@ public static class TradersSnapshotEndpoints
             ?? httpContext.User.FindFirst("email")?.Value
             ?? sub;
 
-        var email = CurrentUserProfileReader.TryGetEmailClaim(httpContext.User);
+        var email = UserEmailClaimResolver.TryResolve(httpContext.User);
 
         var traderId = await store.EnsureLinkedTraderForUserAsync(sub, displayName, email, cancellationToken)
             .ConfigureAwait(false);

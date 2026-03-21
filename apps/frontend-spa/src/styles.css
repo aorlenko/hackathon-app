@@ -1168,6 +1168,41 @@ button.primary-button.inline-link {
   border-bottom: none;
 }
 
+.trading-pets-owned-row--expired {
+  border-left: 4px solid #dc2626;
+  padding-left: 0.6rem;
+  margin-left: -0.1rem;
+  border-radius: 0 10px 10px 0;
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.07) 0%, transparent 55%);
+}
+
+.trading-pets-owned-row--expired .trading-pets-owned-row__thumb {
+  filter: grayscale(0.55) contrast(0.96);
+  opacity: 0.9;
+}
+
+.trading-pets-owned-row__title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+}
+
+.trading-pets-owned-row__expired-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  line-height: 1.2;
+}
+
 .trading-pets-owned-row__main {
   flex: 1;
   min-width: min(100%, 12rem);

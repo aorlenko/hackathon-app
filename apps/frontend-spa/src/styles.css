@@ -742,6 +742,16 @@ select {
   font-weight: 600;
 }
 
+.trading-pets-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.trading-pets-table--settlement-history {
+  min-width: 52rem;
+}
+
 .trading-pets-table {
   width: 100%;
   border-collapse: collapse;

@@ -213,11 +213,11 @@ export const ResaleMarketplacePage = () => {
             ) : null}
             {!listingsLoading && !listingsError && othersListings.length === 0 ? (
               <p className="trading-pets-empty trading-pets-empty--column">
-                No other traders have pets listed right now. Try again later or widen your search from{" "}
-                <Link to="/pets/market" className="trading-pets-text-link">
-                  Pets for sale
-                </Link>
-                .
+                No other traders have pets listed right now. Try again later, or buy on{" "}
+                <Link to="/pets/primary-supply" className="trading-pets-text-link">
+                  Primary supply market
+                </Link>{" "}
+                and list them here.
               </p>
             ) : null}
             <ul className="trading-pets-list trading-pets-listings">

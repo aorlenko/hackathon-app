@@ -19,7 +19,6 @@ import { SettlementHistoryPage } from "./features/history/SettlementHistoryPage"
 import { TradeHistoryPage } from "./features/history/TradeHistoryPage";
 import {
   LeaderboardPage,
-  MarketListingsPage,
   MyPetTraderProvider,
   MyPetsPage,
   PetAnalysisPage,
@@ -72,7 +71,6 @@ export const Header = () => {
         <NavLink to="/pets/primary-supply">Primary supply market</NavLink>
         <NavLink to="/pets/resale">Resale marketplace</NavLink>
         <NavLink to="/pets/my-pets">My pets</NavLink>
-        <NavLink to="/pets/market">Pets for sale</NavLink>
         <NavLink to="/pets/leaderboard">Leaderboard</NavLink>
         <NavLink to="/history/trades">Trade history</NavLink>
         <NavLink to="/history/settlements">Settlement history</NavLink>
@@ -99,7 +97,7 @@ export const App = () => {
               <Route path="/pets/primary-supply" element={<PrimarySupplyMarketPage />} />
               <Route path="/pets/resale" element={<ResaleMarketplacePage />} />
               <Route path="/pets/my-pets" element={<MyPetsPage />} />
-              <Route path="/pets/market" element={<MarketListingsPage />} />
+              <Route path="/pets/market" element={<Navigate to="/pets/resale" replace />} />
               <Route path="/pets/leaderboard" element={<LeaderboardPage />} />
               <Route path="/pets/analysis/:petId" element={<PetAnalysisPage />} />
             </Route>

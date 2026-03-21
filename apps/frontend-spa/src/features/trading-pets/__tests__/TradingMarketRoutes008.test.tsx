@@ -66,6 +66,7 @@ const renderTradingShell = (initialPath: string) =>
               <Route path="/pets/workspace" element={<Navigate to="/pets/primary-supply" replace />} />
               <Route path="/pets/primary-supply" element={<PrimarySupplyMarketPage />} />
               <Route path="/pets/resale" element={<ResaleMarketplacePage />} />
+              <Route path="/pets/market" element={<Navigate to="/pets/resale" replace />} />
             </Route>
             <Route path="*" element={<Navigate to="/pets/primary-supply" replace />} />
           </Routes>
@@ -107,5 +108,10 @@ describe("Trading market routes (008)", () => {
   it("sends unknown paths to primary supply", async () => {
     renderTradingShell("/totally-unknown-route");
     await waitFor(() => expect(screen.getByRole("heading", { name: /^Primary supply market$/i })).toBeInTheDocument());
+  });
+
+  it("redirects legacy /pets/market to resale marketplace", async () => {
+    renderTradingShell("/pets/market");
+    await waitFor(() => expect(screen.getByRole("heading", { name: /^Resale marketplace$/i })).toBeInTheDocument());
   });
 });

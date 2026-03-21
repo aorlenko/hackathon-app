@@ -13,6 +13,8 @@ permissions:
   contents: read
   id-token: write
 
+# Job-level `if` must not use `hashFiles()` or `secrets.*` (GitHub rejects them). Use step outputs to gate on secrets; keep path guards at step level if needed.
+
 jobs:
   infra-validate:
     name: Validate infra and root orchestration
@@ -29,14 +31,23 @@ jobs:
       - name: Validate docker compose
         run: npm run compose:config
 
+      # Runner has Docker + Node; install Azure CLI only (no pwsh — matches validate-bicep.ps1 targets).
+      - name: Install Azure CLI
+        run: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
       - name: Validate Bicep templates
-        shell: pwsh
-        run: npm run infra:validate
+        run: |
+          set -e
+          az bicep version >/dev/null 2>&1 || az bicep install
+          az bicep build --file infra/bicep/modules/monitoring.bicep
+          az bicep build --file infra/bicep/main.bicep
+
+      - name: Validate hackathon parameters JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('infra/environments/hackathon/parameters.dev.json','utf8'))"
 
   frontend:
     name: Frontend lint and tests
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('apps/frontend-spa/package.json') != '' }}
     defaults:
       run:
         working-directory: apps/frontend-spa
@@ -66,7 +77,6 @@ jobs:
   backend:
     name: Backend restore, build, and tests
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('apps/services/TradingPlatform.sln') != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,7 +102,8 @@ jobs:
       - infra-validate
       - frontend
       - backend
-    if: ${{ github.event_name != 'pull_request' && vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != '' && secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' && hashFiles('apps/**/Dockerfile') != '' }}
+    # secrets.* is not allowed in job-level `if` (use a step to read secrets; see first step below).
+    if: ${{ github.event_name != 'pull_request' && vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -114,10 +125,22 @@ jobs:
             context: apps/services/settlement-service
             repository: settlement-service
     steps:
+      - name: Check Azure OIDC secrets
+        id: azure_creds
+        run: |
+          if [ -n "${{ secrets.AZURE_CLIENT_ID }}" ] && [ -n "${{ secrets.AZURE_TENANT_ID }}" ] && [ -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping container image build: Azure OIDC secrets (AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID) are not all set."
+          fi
+
       - name: Checkout
+        if: steps.azure_creds.outputs.ok == 'true'
         uses: actions/checkout@v4
 
       - name: Azure login
+        if: steps.azure_creds.outputs.ok == 'true'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -125,9 +148,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to Azure Container Registry
+        if: steps.azure_creds.outputs.ok == 'true'
         run: az acr login --name "${{ vars.ACR_NAME }}"
 
-      - name: Build and push image
+      - name: Build and push ${{ matrix.name }} image
+        if: steps.azure_creds.outputs.ok == 'true'
         run: |
           if [ ! -f "${{ matrix.dockerfile }}" ]; then
             echo "Skipping ${{ matrix.name }} because ${{ matrix.dockerfile }} is not present yet."

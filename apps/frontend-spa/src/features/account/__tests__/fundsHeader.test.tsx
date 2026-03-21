@@ -37,7 +37,7 @@ describe("Header authenticated panel", () => {
     renderHeader(createAuthState());
 
     expect(screen.getByText("Buyer One")).toBeInTheDocument();
-    expect(screen.getByText(/Authenticated via demo mode/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /demo sign-in/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
     expect(screen.queryByText("Available funds")).not.toBeInTheDocument();
   });

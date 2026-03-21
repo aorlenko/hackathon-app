@@ -18,11 +18,32 @@ $filesToBuild = @(
 
 foreach ($file in $filesToBuild) {
     Write-Host "Building $file..." -ForegroundColor Cyan
-    az bicep build --file $file | Out-Null
+    # az writes linter warnings to stderr; do not treat as terminating under StrictMode/Stop
+    $prevEap = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        az bicep build --file $file 2>&1 | Out-Null
+    }
+    finally {
+        $ErrorActionPreference = $prevEap
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[parameter/tooling] Bicep build failed for: $file (az exit code $LASTEXITCODE)" -ForegroundColor Red
+        Write-Host "Next steps: run 'az bicep build --file $file' locally for full errors; ensure Azure CLI is current ('az upgrade') and Bicep is available ('az bicep install')." -ForegroundColor Yellow
+        throw "Bicep build failed for $file."
+    }
 }
 
 $parameterFile = "infra/environments/hackathon/parameters.dev.json"
 Write-Host "Validating parameter file $parameterFile..." -ForegroundColor Cyan
-Get-Content $parameterFile -Raw | ConvertFrom-Json | Out-Null
+try {
+    $raw = Get-Content $parameterFile -Raw -ErrorAction Stop
+    $null = $raw | ConvertFrom-Json
+}
+catch {
+    Write-Host "[parameter] Could not parse JSON: $parameterFile" -ForegroundColor Red
+    Write-Host "Next steps: validate JSON syntax (trailing commas, quotes); compare structure to ARM deploymentParameters schema." -ForegroundColor Yellow
+    throw
+}
 
 Write-Host "Bicep validation completed successfully." -ForegroundColor Green

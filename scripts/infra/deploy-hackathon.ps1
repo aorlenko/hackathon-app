@@ -26,7 +26,27 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $repoRoot
 
 if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-    throw "Azure CLI ('az') is required to deploy the hackathon environment."
+    throw "[tooling] Azure CLI ('az') is required. Install it and ensure 'az' is on PATH, then re-run."
+}
+
+# Bicep requires sqlAdminPassword; parameters file does not carry the secret.
+if (-not $SqlAdminPassword) {
+    throw "[secret/config] SQL admin password is missing. Set environment variable SQL_ADMIN_PASSWORD (GitHub: secret SQL_ADMIN_PASSWORD on environment 'hackathon')."
+}
+
+if (-not $SqlAdminLogin) {
+    Write-Warning "[secret/config] SQL_ADMIN_LOGIN is empty; Bicep default or parameters file value will be used. For CI, set variable SQL_ADMIN_LOGIN on environment 'hackathon'."
+}
+
+function Write-DeploymentFailureHints {
+    Write-Host ""
+    Write-Host "Deployment command exited non-zero. Quick mapping (see quickstart.md Common failures):" -ForegroundColor Yellow
+    Write-Host "  [identity]   AADSTS*, federated credential subject, wrong tenant/client" -ForegroundColor DarkYellow
+    Write-Host "  [secret]     missing/wrong SQL or Key Vault-related auth" -ForegroundColor DarkYellow
+    Write-Host "  [RBAC]       Authorization failed / 403 on subscription or resource group" -ForegroundColor DarkYellow
+    Write-Host "  [quota]      quota exceeded, region capacity" -ForegroundColor DarkYellow
+    Write-Host "  [parameter]  invalid parameter file path, wrong Bicep parameter names" -ForegroundColor DarkYellow
+    Write-Host "  [ARM policy] RequestDisallowedByPolicy, policy violation messages" -ForegroundColor DarkYellow
 }
 
 if ($CreateResourceGroup) {
@@ -91,8 +111,16 @@ $baseArgs = @(
 ) + $parameterArguments
 
 Write-Host "Running az deployment group $operation for $ResourceGroupName using $TemplateFile..." -ForegroundColor Cyan
-& az @baseArgs
+$prevEap = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    & az @baseArgs
+}
+finally {
+    $ErrorActionPreference = $prevEap
+}
 
 if ($LASTEXITCODE -ne 0) {
-    throw "Deployment command failed."
+    Write-DeploymentFailureHints
+    throw "[ARM] Deployment command failed (exit code $LASTEXITCODE). Inspect Azure CLI output above."
 }

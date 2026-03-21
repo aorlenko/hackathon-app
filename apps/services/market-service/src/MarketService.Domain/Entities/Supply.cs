@@ -4,6 +4,7 @@ public sealed class Supply
 {
     public Guid BreedId { get; set; }
     public int RemainingCount { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
     public Breed? Breed { get; set; }
 }

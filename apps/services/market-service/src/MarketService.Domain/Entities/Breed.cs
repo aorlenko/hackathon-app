@@ -9,6 +9,7 @@ public sealed class Breed
     public int BaselineDesirability { get; set; }
     public decimal MaintenanceCost { get; set; }
     public decimal RetailPrice { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
     public Supply? Supply { get; set; }
     public ICollection<Pet> Pets { get; set; } = new List<Pet>();

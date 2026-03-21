@@ -12,5 +12,6 @@ public sealed class Trade
     public decimal Price { get; set; }
     public int Quantity { get; set; }
     public DateTimeOffset ExecutedAtUtc { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string CorrelationId { get; set; } = string.Empty;
 }

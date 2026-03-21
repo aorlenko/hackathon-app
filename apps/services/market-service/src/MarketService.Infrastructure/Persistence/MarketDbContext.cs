@@ -207,8 +207,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? "Trader" : displayName.Trim(),
             ExternalUserId = userId,
             AvailableCash = initialCashIfNew,
-            LockedCash = 0,
-            CreatedAt = DateTimeOffset.UtcNow
+            LockedCash = 0
         });
         await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -253,6 +252,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.Name).HasMaxLength(256);
             entity.Property(x => x.Category).HasMaxLength(128);
             entity.Property(x => x.ReferencePrice).HasColumnType("decimal(18,4)");
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasIndex(x => x.Symbol).IsUnique();
             entity.HasData(MarketSeedData.Items);
         });
@@ -267,6 +267,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
             entity.Property(x => x.Price).HasColumnType("decimal(18,4)");
             entity.Property(x => x.RejectionReason).HasMaxLength(512);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
         });
 
         modelBuilder.Entity<OrderMatchAudit>(entity =>
@@ -275,6 +276,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.HasKey(x => x.AuditId);
             entity.Property(x => x.MatchPrice).HasColumnType("decimal(18,4)");
             entity.Property(x => x.CorrelationId).HasMaxLength(128);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
         });
 
         modelBuilder.Entity<DemoAccountRecord>(entity =>
@@ -284,6 +286,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.UserId).HasMaxLength(128);
             entity.Property(x => x.DisplayName).HasMaxLength(256);
             entity.Property(x => x.Email).HasMaxLength(256);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasData(MarketSeedData.Accounts);
         });
 
@@ -295,6 +298,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.ExternalUserId).HasMaxLength(256);
             entity.Property(x => x.AvailableCash).HasColumnType("decimal(18,2)");
             entity.Property(x => x.LockedCash).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasIndex(x => x.ExternalUserId);
         });
 
@@ -307,12 +311,14 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.LifespanYears).HasColumnType("decimal(18,4)");
             entity.Property(x => x.MaintenanceCost).HasColumnType("decimal(18,2)");
             entity.Property(x => x.RetailPrice).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
         });
 
         modelBuilder.Entity<Supply>(entity =>
         {
             entity.ToTable("PetBreedSupply");
             entity.HasKey(x => x.BreedId);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasOne(x => x.Breed)
                 .WithOne(x => x.Supply)
                 .HasForeignKey<Supply>(x => x.BreedId)
@@ -325,6 +331,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.HasKey(x => x.Id);
             entity.Property(x => x.AgeYears).HasColumnType("decimal(18,6)");
             entity.Property(x => x.Health).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasOne(x => x.Breed)
                 .WithMany(x => x.Pets)
                 .HasForeignKey(x => x.BreedId)
@@ -341,6 +348,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
         {
             entity.ToTable("PetListings");
             entity.HasKey(x => x.Id);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.Property(x => x.AskingPrice).HasColumnType("decimal(18,2)");
             entity.HasOne(x => x.Pet)
                 .WithMany()
@@ -360,6 +368,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Amount).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasOne(x => x.Listing)
                 .WithMany(x => x.Bids)
                 .HasForeignKey(x => x.ListingId)
@@ -376,6 +385,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.ToTable("PetTrades");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Price).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasOne(x => x.Pet)
                 .WithMany()
                 .HasForeignKey(x => x.PetId)
@@ -404,6 +414,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             entity.Property(x => x.Amount).HasColumnType("decimal(18,2)");
             entity.Property(x => x.CounterpartyDisplayName).HasMaxLength(256);
             entity.Property(x => x.Correlation).HasMaxLength(128);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.HasOne(x => x.Trader)
                 .WithMany(x => x.Notifications)
                 .HasForeignKey(x => x.TraderId)
@@ -418,4 +429,5 @@ public sealed class DemoAccountRecord
     public string UserId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
 }

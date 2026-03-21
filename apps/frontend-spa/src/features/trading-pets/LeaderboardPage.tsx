@@ -8,6 +8,7 @@ export const LeaderboardPage = () => {
   const { hubInvalidateSeq } = useMyPetTrader();
   const [rows, setRows] = useState<LeaderboardRowDto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const skipNextHubInvalidateEffect = useRef(true);
 
   const load = useCallback(async () => {
     setError(null);

@@ -48,6 +48,7 @@ public sealed class TradeDbContext : DbContext, ITradeDataStore
             entity.Property(x => x.Symbol).HasMaxLength(32);
             entity.Property(x => x.Price).HasColumnType("decimal(18,4)");
             entity.Property(x => x.CorrelationId).HasMaxLength(128);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
         });
     }
 }

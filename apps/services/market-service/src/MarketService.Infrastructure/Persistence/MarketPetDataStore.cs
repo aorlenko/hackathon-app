@@ -83,8 +83,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             DisplayName = normalizedName,
             ExternalUserId = externalUserSub,
             AvailableCash = _options.InitialTraderCash,
-            LockedCash = 0,
-            CreatedAt = DateTimeOffset.UtcNow
+            LockedCash = 0
         };
 
         _db.Traders.Add(trader);
@@ -166,7 +165,6 @@ public sealed class MarketPetDataStore : IMarketPetStore
         }
 
         breed.Supply.RemainingCount -= quantity;
-        var now = DateTimeOffset.UtcNow;
         var pets = new List<Pet>();
         for (var i = 0; i < quantity; i++)
         {
@@ -178,8 +176,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
                 AgeYears = 0,
                 Health = 100m,
                 CurrentDesirability = breed.BaselineDesirability,
-                IsExpired = false,
-                CreatedAt = now
+                IsExpired = false
             };
             pets.Add(pet);
             _db.Pets.Add(pet);
@@ -391,7 +388,6 @@ public sealed class MarketPetDataStore : IMarketPetStore
             PetId = petId,
             SellerTraderId = traderId,
             AskingPrice = askingPrice,
-            CreatedAt = DateTimeOffset.UtcNow,
             WithdrawnAt = null
         };
         _db.Listings.Add(listing);
@@ -515,8 +511,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             ListingId = listing.Id,
             BuyerTraderId = traderId,
             Amount = amount,
-            Status = BidStatus.Active,
-            CreatedAt = DateTimeOffset.UtcNow
+            Status = BidStatus.Active
         };
         _db.Bids.Add(bid);
         await AddBidReceivedNotificationAsync(listing, bid, buyer, cancellationToken).ConfigureAwait(false);
@@ -859,8 +854,9 @@ public sealed class MarketPetDataStore : IMarketPetStore
             return [];
         }
 
-        var seconds = Math.Max(1, _options.ValuationTickSeconds);
-        var tickYears = seconds / (365.25m * 24m * 3600m);
+        var tickYears = _options.AgeYearsEveryMinute > 0m
+            ? _options.AgeYearsEveryMinute
+            : TradingPetsOptions.DefaultAgeYearsEveryMinute;
 
         var affected = new List<Guid>();
         foreach (var pet in pets.Where(p => p.Breed is not null))
@@ -1269,7 +1265,6 @@ public sealed class MarketPetDataStore : IMarketPetStore
             Amount = amount,
             CounterpartyTraderId = counterpartyId,
             CounterpartyDisplayName = counterpartyName,
-            CreatedAt = DateTimeOffset.UtcNow,
             Correlation = correlation
         });
         await Task.CompletedTask;

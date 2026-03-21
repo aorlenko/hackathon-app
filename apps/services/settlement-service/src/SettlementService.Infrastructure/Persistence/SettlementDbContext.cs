@@ -40,6 +40,7 @@ public sealed class SettlementDbContext : DbContext, ISettlementDataStore
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
             entity.Property(x => x.FailureReason).HasMaxLength(512);
             entity.Property(x => x.CorrelationId).HasMaxLength(128);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
         });
     }
 }

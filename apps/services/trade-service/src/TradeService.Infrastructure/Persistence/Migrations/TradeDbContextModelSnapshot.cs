@@ -41,6 +41,11 @@ namespace TradeService.Infrastructure.Persistence.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
                     b.Property<DateTimeOffset>("ExecutedAtUtc")
                         .HasColumnType("datetimeoffset");
 

@@ -14,11 +14,12 @@ public static class SeedDataRunner
             return;
         }
 
-        store.Accounts.AddRange(MarketSeedData.Accounts.Select(account => new DemoAccountRecord
+        store.Accounts.AddRange(MarketSeedData.Accounts.Select(a => new DemoAccountRecord
         {
-            UserId = account.UserId,
-            DisplayName = account.DisplayName,
-            Email = account.Email
+            UserId = a.UserId,
+            DisplayName = a.DisplayName,
+            Email = a.Email,
+            CreatedAt = a.CreatedAt
         }));
 
         foreach (var w in MarketSeedData.SeededUserWallets)
@@ -29,8 +30,7 @@ public static class SeedDataRunner
                 DisplayName = w.DisplayName,
                 ExternalUserId = w.UserId,
                 AvailableCash = w.AvailableCash,
-                LockedCash = 0,
-                CreatedAt = DateTimeOffset.UtcNow
+                LockedCash = 0
             });
         }
 
@@ -72,8 +72,7 @@ public static class SeedDataRunner
                 DisplayName = $"Trader {i}",
                 ExternalUserId = null,
                 AvailableCash = options.InitialTraderCash,
-                LockedCash = 0,
-                CreatedAt = DateTimeOffset.UtcNow
+                LockedCash = 0
             });
         }
 

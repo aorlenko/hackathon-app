@@ -9,6 +9,7 @@ public sealed class Trade
     public Guid SellerTraderId { get; set; }
     public decimal Price { get; set; }
     public DateTimeOffset ExecutedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
     public Pet? Pet { get; set; }
     public Listing? Listing { get; set; }

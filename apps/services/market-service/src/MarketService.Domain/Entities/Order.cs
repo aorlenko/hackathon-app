@@ -26,6 +26,7 @@ public sealed class Order
     public int RemainingQuantity { get; private set; }
     public OrderStatus Status { get; private set; }
     public DateTimeOffset AcceptedAtUtc { get; set; }
+    public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset LastUpdatedAtUtc { get; private set; }
     public string? RejectionReason { get; private set; }
 

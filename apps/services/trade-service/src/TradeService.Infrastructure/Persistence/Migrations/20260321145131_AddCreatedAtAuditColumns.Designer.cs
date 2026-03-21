@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using SettlementService.Infrastructure.Persistence;
+using TradeService.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace SettlementService.Infrastructure.Persistence.Migrations
+namespace TradeService.Infrastructure.Persistence.Migrations
 {
-    [DbContext(typeof(SettlementDbContext))]
-    partial class SettlementDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(TradeDbContext))]
+    [Migration("20260321145131_AddCreatedAtAuditColumns")]
+    partial class AddCreatedAtAuditColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,19 +25,19 @@ namespace SettlementService.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("SettlementService.Domain.Entities.Settlement", b =>
+            modelBuilder.Entity("TradeService.Domain.Entities.Trade", b =>
                 {
-                    b.Property<Guid>("SettlementId")
+                    b.Property<Guid>("TradeId")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BuyOrderId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BuyerUserId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTimeOffset?>("CompletedAtUtc")
-                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("CorrelationId")
                         .IsRequired()
@@ -46,32 +49,34 @@ namespace SettlementService.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<string>("FailureReason")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                    b.Property<DateTimeOffset>("ExecutedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SellOrderId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("SellerUserId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<DateTimeOffset>("StartedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Status")
+                    b.Property<string>("Symbol")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
-                    b.Property<Guid>("TradeId")
-                        .HasColumnType("uniqueidentifier");
+                    b.HasKey("TradeId");
 
-                    b.HasKey("SettlementId");
-
-                    b.HasIndex("TradeId")
-                        .IsUnique();
-
-                    b.ToTable("Settlements", (string)null);
+                    b.ToTable("Trades", (string)null);
                 });
 #pragma warning restore 612, 618
         }

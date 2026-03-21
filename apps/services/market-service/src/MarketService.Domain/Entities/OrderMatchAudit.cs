@@ -8,5 +8,6 @@ public sealed class OrderMatchAudit
     public decimal MatchPrice { get; set; }
     public int MatchQuantity { get; set; }
     public DateTimeOffset MatchedAtUtc { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string CorrelationId { get; set; } = string.Empty;
 }

@@ -6,7 +6,7 @@ internal static class MarketSeedData
 {
     public static readonly Guid AbcItemId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid XyzItemId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-    public static readonly DateTimeOffset CreatedAtUtc = new(2026, 3, 16, 0, 0, 0, TimeSpan.Zero);
+    public static readonly DateTimeOffset SeedCreatedAt = new(2026, 3, 16, 0, 0, 0, TimeSpan.Zero);
     public static readonly Item[] Items =
     [
         new Item
@@ -17,7 +17,7 @@ internal static class MarketSeedData
             Category = "Equity",
             ReferencePrice = 100m,
             IsTradable = true,
-            CreatedAtUtc = CreatedAtUtc
+            CreatedAt = SeedCreatedAt
         },
         new Item
         {
@@ -27,7 +27,7 @@ internal static class MarketSeedData
             Category = "Equity",
             ReferencePrice = 80m,
             IsTradable = true,
-            CreatedAtUtc = CreatedAtUtc
+            CreatedAt = SeedCreatedAt
         }
     ];
 
@@ -37,19 +37,22 @@ internal static class MarketSeedData
         {
             UserId = "user-1",
             DisplayName = "Buyer One",
-            Email = "user1@example.com"
+            Email = "user1@example.com",
+            CreatedAt = SeedCreatedAt
         },
         new DemoAccountRecord
         {
             UserId = "user-2",
             DisplayName = "Seller Two",
-            Email = "user2@example.com"
+            Email = "user2@example.com",
+            CreatedAt = SeedCreatedAt
         },
         new DemoAccountRecord
         {
             UserId = "user-3",
             DisplayName = "Observer Three",
-            Email = "user3@example.com"
+            Email = "user3@example.com",
+            CreatedAt = SeedCreatedAt
         }
     ];
 

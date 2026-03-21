@@ -859,7 +859,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             : TradingPetsOptions.DefaultAgeYearsEveryMinute;
 
         var affected = new List<Guid>();
-        foreach (var pet in pets.Where(p => p.Breed is not null))
+        foreach (var pet in pets.Where(p => p.Breed is not null && !p.IsExpired))
         {
             var breed = pet.Breed!;
             pet.AgeYears += tickYears;

@@ -16,6 +16,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-21
 - N/A (client reads market service APIs; server persistence unchanged) (006-pet-trading-ux)
 - YAML (GitHub Actions), PowerShell 7 (`pwsh`), Node.js 20, .NET 8 SDK + `actions/checkout`, `actions/setup-node`, `actions/setup-dotnet`, `azure/login` (only in non-PR image job—out of scope to redesign); repo scripts `npm run compose:config`, `npm run infra:validate` (007-fix-github-ci)
 - N/A (no data store changes) (007-fix-github-ci)
+- TypeScript 5.x, React 18, Vite 6, React Router 6 + Existing `apps/frontend-spa` trading feature (`tradingPetsApi.ts`, `MyPetTraderContext`, `useTradingPetsRealtime` / `hubInvalidateSeq`), Auth0 SPA SDK, `@microsoft/signalr` (008-split-trading-marketplaces)
+- N/A (no new persistence; market service remains system of record per spec A-001/A-002) (008-split-trading-marketplaces)
 
 - C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation) + ASP.NET Core Minimal APIs, SignalR, EF Core (SqlServer), Azure Service Bus SDK, Azure Identity, Auth0 SPA + JWT APIs, OpenTelemetry + Application Insights exporter (001-realtime-trading-platform)
 
@@ -36,9 +38,9 @@ npm test; npm run lint
 C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation): Follow standard conventions
 
 ## Recent Changes
+- 008-split-trading-marketplaces: Added TypeScript 5.x, React 18, Vite 6, React Router 6 + Existing `apps/frontend-spa` trading feature (`tradingPetsApi.ts`, `MyPetTraderContext`, `useTradingPetsRealtime` / `hubInvalidateSeq`), Auth0 SPA SDK, `@microsoft/signalr`
 - 007-fix-github-ci: Added YAML (GitHub Actions), PowerShell 7 (`pwsh`), Node.js 20, .NET 8 SDK + `actions/checkout`, `actions/setup-node`, `actions/setup-dotnet`, `azure/login` (only in non-PR image job—out of scope to redesign); repo scripts `npm run compose:config`, `npm run infra:validate`
 - 006-pet-trading-ux: Added TypeScript 5.x, React 18 + Vite 6, React Router 6, Auth0 SPA SDK, `@microsoft/signalr`, existing `fetchJson` HTTP helpers
-- 004-trading-pets: Added C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend) + ASP.NET Core Minimal APIs, EF Core (SqlServer), SignalR, Auth0 SPA SDK + JWT bearer APIs, existing `Trading.*` shared libraries
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -18,6 +18,18 @@
   box-sizing: border-box;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -509,10 +521,34 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.trading-pets-page--resale {
+  max-width: min(1200px, 100%);
+}
+
+.trading-pets-resale-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
 @media (max-width: 720px) {
   .trading-pets-grid--workspace-pair {
     grid-template-columns: 1fr;
   }
+
+  .trading-pets-resale-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trading-pets-resale__offer .trading-pets-card__body,
+.trading-pets-resale__bid .trading-pets-card__body {
+  padding-top: 0;
+}
+
+.trading-pets-empty--column {
+  margin: 0 0 0.75rem;
 }
 
 .trading-pets-card {

@@ -12,10 +12,14 @@ export const MyPetsPage = () => {
         <h1>My pets</h1>
         <p className="muted trading-pets-page__intro trading-pets-page__intro--full">
           Inventory from your pet trader account — one row per pet. Buy new pets on{" "}
-          <Link to="/pets/workspace" className="trading-pets-text-link">
-            Pet trading
+          <Link to="/pets/primary-supply" className="trading-pets-text-link">
+            Primary supply market
           </Link>
-          ; offer one for sale from the resale marketplace there.
+          ; offer one for sale from the{" "}
+          <Link to="/pets/resale" className="trading-pets-text-link">
+            Resale marketplace
+          </Link>
+          .
         </p>
       </header>
 
@@ -28,8 +32,8 @@ export const MyPetsPage = () => {
           {pets.length === 0 ? (
             <li className="trading-pets-empty">
               You do not own any pets yet. Open{" "}
-              <Link to="/pets/workspace" className="trading-pets-text-link">
-                Pet trading
+              <Link to="/pets/primary-supply" className="trading-pets-text-link">
+                Primary supply market
               </Link>{" "}
               to buy from primary supply.
             </li>

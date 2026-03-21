@@ -6,7 +6,7 @@ on:
       environmentName:
         description: Environment name parameter override.
         required: true
-        default: dev
+        default: hackathon
         type: string
       location:
         description: Azure region for the resource group.

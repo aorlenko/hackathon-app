@@ -40,9 +40,6 @@ param auth0Audience string = 'https://trading-platform-api'
 @description('Auth0 SPA client id.')
 param auth0ClientId string = 'replace-me'
 
-@description('Optional email recipient for alert notifications.')
-param alertEmailAddress string = ''
-
 var namePrefix = '${projectName}-${environmentName}'
 var sqlServerName = 'sql-${namePrefix}-${uniqueString(resourceGroup().id)}'
 var sqlDatabaseName = '${projectName}-${environmentName}'
@@ -65,7 +62,6 @@ module monitoring 'modules/monitoring.bicep' = {
     location: location
     namePrefix: namePrefix
     tags: tags
-    alertEmailAddress: alertEmailAddress
   }
 }
 

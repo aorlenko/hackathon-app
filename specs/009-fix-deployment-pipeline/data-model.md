@@ -41,7 +41,6 @@ Aligned with **`contracts/deployment-pipeline-contract.md`** sections C and D (S
 | `AUTH0_DOMAIN` |
 | `AUTH0_AUDIENCE` |
 | `AUTH0_CLIENT_ID` |
-| `ALERT_EMAIL_ADDRESS` |
 
 **Azure (outside GitHub)**
 

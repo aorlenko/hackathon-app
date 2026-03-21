@@ -37,7 +37,7 @@
 **⚠️ CRITICAL**: Complete this phase before implementation tasks in US1–US3 that change workflow inputs or secrets.
 
 - [x] T002 Reconcile `specs/009-fix-deployment-pipeline/contracts/deployment-pipeline-contract.md` sections A–F with the live `.github/workflows/deploy-hackathon.yml` (dispatch inputs, `permissions`, `environment: hackathon`, `secrets.*`, `vars.*`, smoke env wiring); update the contract file for any drift
-- [x] T003 [P] Verify `scripts/infra/deploy-hackathon.ps1` CLI `--parameters` overrides match `infra/bicep/main.bicep` parameter names (`sqlAdminLogin`, `sqlAdminPassword`, `auth0Domain`, `auth0Audience`, `auth0ClientId`, `alertEmailAddress`, image parameters); fix script or Bicep if mismatched
+- [x] T003 [P] Verify `scripts/infra/deploy-hackathon.ps1` CLI `--parameters` overrides match `infra/bicep/main.bicep` parameter names (`sqlAdminLogin`, `sqlAdminPassword`, `auth0Domain`, `auth0Audience`, `auth0ClientId`, image parameters); fix script or Bicep if mismatched
 - [x] T004 [P] Verify the **Resolve container app endpoints** step in `.github/workflows/deploy-hackathon.yml` uses `infra/environments/hackathon/parameters.dev.json` `parameters.projectName.value` and app name suffix `${{ inputs.environmentName }}` per `specs/009-fix-deployment-pipeline/contracts/deployment-pipeline-contract.md`; fix workflow or contract if naming diverges from `infra/bicep/main.bicep`
 
 **Checkpoint**: Contract, workflow, Bicep parameters, and Container App naming are internally consistent.

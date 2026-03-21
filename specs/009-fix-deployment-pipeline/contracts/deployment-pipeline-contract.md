@@ -62,7 +62,6 @@ Job `deploy` uses `environment: hackathon`. Secrets and variables below are refe
 | `AUTH0_DOMAIN` | `env.AUTH0_DOMAIN` |
 | `AUTH0_AUDIENCE` | `env.AUTH0_AUDIENCE` |
 | `AUTH0_CLIENT_ID` | `env.AUTH0_CLIENT_ID` |
-| `ALERT_EMAIL_ADDRESS` | `env.ALERT_EMAIL_ADDRESS` |
 
 ---
 
@@ -88,7 +87,7 @@ Script `deploy-hackathon.ps1` always passes:
 - `@parametersFile`
 - `environmentName=<workflow input>`
 
-Optional CLI overrides when env vars are set: `sqlAdminLogin`, `sqlAdminPassword`, `auth0Domain`, `auth0Audience`, `auth0ClientId`, `alertEmailAddress`, and non-empty image overrides.
+Optional CLI overrides when env vars are set: `sqlAdminLogin`, `sqlAdminPassword`, `auth0Domain`, `auth0Audience`, `auth0ClientId`, and non-empty image overrides.
 
 ---
 

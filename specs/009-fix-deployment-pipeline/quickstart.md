@@ -53,7 +53,6 @@ After Azure setup, configure the repository.
    | `AUTH0_DOMAIN` | Auth0 tenant domain |
    | `AUTH0_AUDIENCE` | API audience |
    | `AUTH0_CLIENT_ID` | SPA client ID for demo |
-   | `ALERT_EMAIL_ADDRESS` | Optional; if set, monitoring module can wire email receivers |
 
 4. **Optional protections**  
    - You may add required reviewers or wait timers on environment `hackathon`. Spec **PRF-001** treats approval wait as outside the “~2 hour” automation budget.
@@ -82,7 +81,7 @@ For a full machine-readable inventory of workflow inputs, secrets, variables, an
 ## 4. Verify before first deploy
 
 - [ ] Federated credential **subject** matches how GitHub issues OIDC tokens for this repo and environment `hackathon`.  
-- [ ] All **four** environment secrets and **five** variables in section 2 exist on environment `hackathon`.  
+- [ ] All **four** environment secrets and **four** variables in section 2 exist on environment `hackathon`.  
 - [ ] Service principal has **RBAC** on the subscription or target resource group.  
 - [ ] `infra/environments/hackathon/parameters.dev.json` reviewed (non-secret defaults; no `sqlAdminPassword` in file).
 

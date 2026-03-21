@@ -10,7 +10,6 @@ param(
     [string]$Auth0Domain = $env:AUTH0_DOMAIN,
     [string]$Auth0Audience = $env:AUTH0_AUDIENCE,
     [string]$Auth0ClientId = $env:AUTH0_CLIENT_ID,
-    [string]$AlertEmailAddress = $env:ALERT_EMAIL_ADDRESS,
     [string]$FrontendImage = "",
     [string]$MarketServiceImage = "",
     [string]$TradeServiceImage = "",
@@ -78,10 +77,6 @@ if ($Auth0Audience) {
 
 if ($Auth0ClientId) {
     $parameterArguments += "auth0ClientId=$Auth0ClientId"
-}
-
-if ($AlertEmailAddress) {
-    $parameterArguments += "alertEmailAddress=$AlertEmailAddress"
 }
 
 if ($FrontendImage) {

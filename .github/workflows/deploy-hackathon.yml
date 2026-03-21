@@ -39,7 +39,6 @@ jobs:
       AUTH0_DOMAIN: ${{ vars.AUTH0_DOMAIN }}
       AUTH0_AUDIENCE: ${{ vars.AUTH0_AUDIENCE }}
       AUTH0_CLIENT_ID: ${{ vars.AUTH0_CLIENT_ID }}
-      ALERT_EMAIL_ADDRESS: ${{ vars.ALERT_EMAIL_ADDRESS }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

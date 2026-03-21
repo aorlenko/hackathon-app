@@ -51,19 +51,13 @@ ContainerAppSystemLogs_CL
 | order by restarts desc
 ```
 
-## Alerting Baseline
+## Alerting
 
-The Bicep monitoring module provisions a scheduled query rule that alerts when failed requests exceed five over a five-minute window.
-
-- Scope: Log Analytics workspace for the hackathon environment
-- Severity: `2`
-- Trigger: failed request count `> 5` in the last `5m`
-- Action group: optional email receiver controlled by `alertEmailAddress`
+The Bicep monitoring module provisions **Log Analytics + Application Insights only** (no scheduled alert rules or action groups). Add Azure Monitor alerts or workbooks manually if you need notifications.
 
 ## Validation Steps
 
 1. Deploy `infra/bicep/main.bicep`.
 2. Open the generated Application Insights instance.
 3. Create or import a workbook using the queries above.
-4. Trigger a known failure or stop one API revision to confirm the alert fires.
-5. During demo rehearsals, capture screenshots of the request health and latency sections.
+4. During demo rehearsals, capture screenshots of the request health and latency sections.

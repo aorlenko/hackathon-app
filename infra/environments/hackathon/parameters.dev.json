@@ -23,9 +23,6 @@
     "auth0ClientId": {
       "value": "replace-me"
     },
-    "alertEmailAddress": {
-      "value": ""
-    },
     "frontendImage": {
       "value": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
     },

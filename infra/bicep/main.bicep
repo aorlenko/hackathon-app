@@ -50,10 +50,11 @@ var serviceBusNamespaceName = 'sb-${namePrefix}-${uniqueString(resourceGroup().i
 var serviceBusTopicName = 'trading.lifecycle'
 var keyVaultName = 'kv-${environmentName}-${uniqueString(resourceGroup().id)}'
 var containerAppEnvironmentName = 'cae-${namePrefix}'
-var frontendAppName = 'frontend-spa-${namePrefix}'
-var marketAppName = 'market-service-${namePrefix}'
-var tradeAppName = 'trade-service-${namePrefix}'
-var settlementAppName = 'settlement-service-${namePrefix}'
+// Container Apps resource names: max 32 chars; long prefixes (e.g. settlement-service) exceed limit with project+env.
+var frontendAppName = 'fe-${namePrefix}'
+var marketAppName = 'mkt-${namePrefix}'
+var tradeAppName = 'trd-${namePrefix}'
+var settlementAppName = 'stl-${namePrefix}'
 var acrName = take(replace('acr${projectName}${environmentName}${uniqueString(resourceGroup().id)}', '-', ''), 50)
 var sqlConnectionString = 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${sqlDatabase.name};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 

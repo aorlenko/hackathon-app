@@ -85,10 +85,10 @@ jobs:
           ENV_NAME="${{ inputs.environmentName }}"
           RG="${{ inputs.resourceGroupName }}"
 
-          FRONTEND_APP="frontend-spa-${PROJECT_NAME}-${ENV_NAME}"
-          MARKET_APP="market-service-${PROJECT_NAME}-${ENV_NAME}"
-          TRADE_APP="trade-service-${PROJECT_NAME}-${ENV_NAME}"
-          SETTLEMENT_APP="settlement-service-${PROJECT_NAME}-${ENV_NAME}"
+          FRONTEND_APP="fe-${PROJECT_NAME}-${ENV_NAME}"
+          MARKET_APP="mkt-${PROJECT_NAME}-${ENV_NAME}"
+          TRADE_APP="trd-${PROJECT_NAME}-${ENV_NAME}"
+          SETTLEMENT_APP="stl-${PROJECT_NAME}-${ENV_NAME}"
 
           FRONTEND_URL="https://$(az containerapp show --resource-group "$RG" --name "$FRONTEND_APP" --query 'properties.configuration.ingress.fqdn' -o tsv)"
           MARKET_API_URL="https://$(az containerapp show --resource-group "$RG" --name "$MARKET_APP" --query 'properties.configuration.ingress.fqdn' -o tsv)"

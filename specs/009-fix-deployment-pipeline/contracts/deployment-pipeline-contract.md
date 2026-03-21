@@ -19,12 +19,12 @@ Source: `.github/workflows/deploy-hackathon.yml` (job `deploy` on `ubuntu-latest
 | `settlementServiceImage` | string | no | `""` | Bicep `settlementServiceImage` |
 | `runSmoke` | boolean | yes | `true` | Gates smoke step |
 
-Naming contract for Container Apps (endpoint resolution step) must stay aligned with Bicep:
+Naming contract for Container Apps (endpoint resolution step) must stay aligned with Bicep. **Azure limits app names to 32 characters**, so the template uses short prefixes:
 
-- `frontend-spa-${projectName}-${environmentName}`
-- `market-service-${projectName}-${environmentName}`
-- `trade-service-${projectName}-${environmentName}`
-- `settlement-service-${projectName}-${environmentName}`
+- `fe-${projectName}-${environmentName}`
+- `mkt-${projectName}-${environmentName}`
+- `trd-${projectName}-${environmentName}`
+- `stl-${projectName}-${environmentName}`
 
 where `projectName` is read from `infra/environments/hackathon/parameters.dev.json` at `parameters.projectName.value`.
 

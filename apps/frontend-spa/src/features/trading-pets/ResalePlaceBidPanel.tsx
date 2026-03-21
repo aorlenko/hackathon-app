@@ -5,6 +5,8 @@ type Props = {
   traderId: string;
   accessToken?: string;
   selectedListing: MarketListingDto | null;
+  /** Your active below-ask bid on the selected listing, if any. */
+  selectedListingPendingBidAmount?: number | null;
   onClearBidSelection: () => void;
   bidAmount: number;
   onBidAmountChange: (n: number) => void;
@@ -16,6 +18,7 @@ export const ResalePlaceBidPanel = ({
   traderId,
   accessToken,
   selectedListing,
+  selectedListingPendingBidAmount = null,
   onClearBidSelection,
   bidAmount,
   onBidAmountChange,
@@ -30,6 +33,17 @@ export const ResalePlaceBidPanel = ({
     }
     if (selectedListing.sellerTraderId === traderId) {
       onBidError("Bids apply to other traders’ listings — pick an offer under Others’ offers.");
+      return;
+    }
+    const pending = selectedListingPendingBidAmount;
+    if (
+      pending != null &&
+      bidAmount < selectedListing.askingPrice &&
+      bidAmount <= pending
+    ) {
+      onBidError(
+        `Enter more than your current bid ($${pending.toFixed(2)}) or match the asking price to buy now.`,
+      );
       return;
     }
     try {
@@ -54,10 +68,10 @@ export const ResalePlaceBidPanel = ({
               <span className="trading-pets-bid-target__label">You&apos;re bidding on</span>
               <button
                 type="button"
-                className="inline-link trading-pets-bid-target__change"
+                className="inline-link trading-pets-bid-target__cancel"
                 onClick={() => onClearBidSelection()}
               >
-                Change
+                Cancel
               </button>
             </div>
             <p className="trading-pets-bid-target__summary">
@@ -66,6 +80,13 @@ export const ResalePlaceBidPanel = ({
               ${othersListing.askingPrice.toFixed(2)}
             </p>
           </div>
+          {selectedListingPendingBidAmount != null ? (
+            <p className="muted small">
+              Your current pending bid on this listing is{" "}
+              <strong>${selectedListingPendingBidAmount.toFixed(2)}</strong>. To replace it, enter a higher amount
+              below (or the asking price for an instant purchase).
+            </p>
+          ) : null}
           <label className="trading-pets-field">
             <span>Your bid amount</span>
             <input
@@ -77,7 +98,7 @@ export const ResalePlaceBidPanel = ({
             />
           </label>
           <button type="button" className="primary-button" onClick={() => void bid()}>
-            Submit bid
+            {selectedListingPendingBidAmount != null ? "Raise bid" : "Submit bid"}
           </button>
         </>
       ) : (

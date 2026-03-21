@@ -43,7 +43,7 @@ public sealed class SecondaryMarketHandlers
         CancellationToken cancellationToken = default) =>
         _store.AcceptBidAsync(traderId, listingId, cancellationToken);
 
-    public Task<bool> RejectBidAsync(
+    public Task<(bool ok, Guid? buyerTraderId)> RejectBidAsync(
         Guid traderId,
         Guid listingId,
         CancellationToken cancellationToken = default) =>

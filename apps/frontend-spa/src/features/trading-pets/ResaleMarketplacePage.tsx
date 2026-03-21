@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { useMyPetTrader } from "./MyPetTraderContext";
 import { getMarketListings, type MarketListingDto } from "./tradingPetsApi";
 import { partitionResaleListings } from "./marketListingsPartition";
 import { ResaleMarketListingRow } from "./ResaleMarketListingRow";
+import { findActiveMyBidForListing, minRaiseBidAmount } from "./tradingPetsBidUtils";
 import { ResaleOfferPetForm } from "./ResaleOfferPetForm";
 import { ResalePlaceBidPanel } from "./ResalePlaceBidPanel";
 
@@ -17,6 +18,12 @@ export const ResaleMarketplacePage = () => {
   const [listingsLoading, setListingsLoading] = useState(false);
   const [listingsError, setListingsError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** After first successful fetch, hub/poll refreshes load in the background without column loading flashes. */
+  const listingsLoadedOnceOk = useRef(false);
+
+  useEffect(() => {
+    listingsLoadedOnceOk.current = false;
+  }, [traderId, auth.accessToken]);
 
   const { yourListings, othersListings } = useMemo(
     () => partitionResaleListings(listings, traderId),
@@ -28,23 +35,39 @@ export const ResaleMarketplacePage = () => {
     [listings, bidListingId],
   );
 
-  const load = useCallback(async () => {
-    setListingsError(null);
-    setListingsLoading(true);
-    try {
-      setListings(await getMarketListings(auth.accessToken));
-    } catch (e) {
-      setListingsError(e instanceof Error ? e.message : "Couldn’t load pets for sale");
-    } finally {
-      setListingsLoading(false);
+  const selectedListingPendingBidAmount = useMemo(() => {
+    if (!selectedListing) {
+      return null;
     }
-  }, [auth.accessToken]);
+    return findActiveMyBidForListing(snapshot?.myBids, selectedListing.listingId)?.amount ?? null;
+  }, [selectedListing, snapshot?.myBids]);
+
+  const load = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      setListingsError(null);
+      if (!silent) {
+        setListingsLoading(true);
+      }
+      try {
+        setListings(await getMarketListings(auth.accessToken));
+        listingsLoadedOnceOk.current = true;
+      } catch (e) {
+        setListingsError(e instanceof Error ? e.message : "Couldn’t load pets for sale");
+      } finally {
+        if (!silent) {
+          setListingsLoading(false);
+        }
+      }
+    },
+    [auth.accessToken],
+  );
 
   useEffect(() => {
     if (!auth.accessToken || !traderId) {
       return;
     }
-    void load();
+    void load({ silent: listingsLoadedOnceOk.current });
   }, [auth.accessToken, traderId, hubInvalidateSeq, load]);
 
   useEffect(() => {
@@ -64,13 +87,18 @@ export const ResaleMarketplacePage = () => {
       return;
     }
     setActionError(null);
+    const existing = findActiveMyBidForListing(snapshot?.myBids, l.listingId);
+    if (existing) {
+      setBidAmount(minRaiseBidAmount(existing.amount));
+    } else {
+      setBidAmount(Math.max(1, Math.round(l.askingPrice * 100) / 100));
+    }
     setBidListingId(l.listingId);
-    setBidAmount(Math.max(1, Math.round(l.askingPrice * 100) / 100));
   };
 
   const afterListingMutation = async () => {
     void refresh();
-    await load();
+    await load({ silent: true });
   };
 
   return (
@@ -186,18 +214,24 @@ export const ResaleMarketplacePage = () => {
               </p>
             ) : null}
             <ul className="trading-pets-list trading-pets-listings">
-              {othersListings.map((l) => (
-                <ResaleMarketListingRow
-                  key={l.listingId}
-                  listing={l}
-                  traderId={traderId}
-                  accessToken={auth.accessToken}
-                  bidListingId={bidListingId}
-                  allowBidSelection
-                  onSelectForBid={onSelectForBid}
-                  onSellerSideChanged={() => void afterListingMutation()}
-                />
-              ))}
+              {othersListings.map((l) => {
+                const active = findActiveMyBidForListing(snapshot?.myBids, l.listingId);
+                return (
+                  <ResaleMarketListingRow
+                    key={l.listingId}
+                    listing={l}
+                    traderId={traderId}
+                    accessToken={auth.accessToken}
+                    bidListingId={bidListingId}
+                    allowBidSelection
+                    onSelectForBid={onSelectForBid}
+                    onSellerSideChanged={() => void afterListingMutation()}
+                    myActiveBid={
+                      active ? { bidId: active.bidId, amount: active.amount } : null
+                    }
+                  />
+                );
+              })}
             </ul>
           </div>
         </section>
@@ -212,6 +246,7 @@ export const ResaleMarketplacePage = () => {
             traderId={traderId}
             accessToken={auth.accessToken}
             selectedListing={selectedListing}
+            selectedListingPendingBidAmount={selectedListingPendingBidAmount}
             onClearBidSelection={() => {
               setActionError(null);
               setBidListingId("");

@@ -3,6 +3,11 @@ import { ListingSellerActions } from "./ListingSellerActions";
 import { listingSellerClause } from "./listingSellerLabel";
 import { formatShortPetId } from "./petDisplayUtils";
 
+export type MyActiveBidOnListing = {
+  bidId: string;
+  amount: number;
+};
+
 type Props = {
   listing: MarketListingDto;
   traderId: string;
@@ -12,6 +17,8 @@ type Props = {
   onSellerSideChanged: () => void;
   /** When false (your listings column), bidding controls are hidden. */
   allowBidSelection: boolean;
+  /** Your active below-ask bid on this listing (buyer view). */
+  myActiveBid?: MyActiveBidOnListing | null;
 };
 
 export const ResaleMarketListingRow = ({
@@ -22,6 +29,7 @@ export const ResaleMarketListingRow = ({
   onSelectForBid,
   onSellerSideChanged,
   allowBidSelection,
+  myActiveBid,
 }: Props) => {
   const sellerClause = listingSellerClause(
     l.sellerTraderId,
@@ -55,17 +63,46 @@ export const ResaleMarketListingRow = ({
         remaining: {l.remainingNewSupplyForBreed}
       </div>
       {isOwn ? (
-        <ListingSellerActions
-          listingId={l.listingId}
-          sellerTraderId={traderId}
-          accessToken={accessToken}
-          onChanged={onSellerSideChanged}
-        />
+        <>
+          {l.activeBidAmount != null ? (
+            <div className="trading-pets-active-bid" role="status" aria-live="polite">
+              <span className="trading-pets-active-bid__label">Current below-ask bid</span>
+              <span className="trading-pets-active-bid__amount">${l.activeBidAmount.toFixed(2)}</span>
+              <span className="muted small trading-pets-active-bid__buyer">
+                from {l.activeBidBuyerDisplayName?.trim() || "another trader"}
+              </span>
+            </div>
+          ) : null}
+          <ListingSellerActions
+            listingId={l.listingId}
+            sellerTraderId={traderId}
+            accessToken={accessToken}
+            onChanged={onSellerSideChanged}
+            hasPendingBid={l.activeBidAmount != null}
+          />
+        </>
       ) : allowBidSelection ? (
-        <div className="trading-pets-inline">
+        <div className="trading-pets-inline trading-pets-buyer-actions">
+          {myActiveBid ? (
+            <div className="trading-pets-your-bid" role="status" aria-live="polite">
+              <span className="trading-pets-your-bid__label">Your pending bid</span>
+              <span className="trading-pets-your-bid__amount">${myActiveBid.amount.toFixed(2)}</span>
+              <span className="muted small trading-pets-your-bid__hint">
+                Waiting for the seller. You can raise it from Place bid below.
+              </span>
+            </div>
+          ) : null}
           {isBidSelected ? (
             <span className="muted small" aria-current="true">
-              Selected — use <strong>Place bid</strong> below
+              {myActiveBid ? (
+                <>
+                  Selected — enter a <strong>higher</strong> amount under Place bid, then submit.
+                </>
+              ) : (
+                <>
+                  Selected — use <strong>Place bid</strong> below
+                </>
+              )}
             </span>
           ) : (
             <button
@@ -73,7 +110,7 @@ export const ResaleMarketListingRow = ({
               className="secondary-button trading-pets-listing-card__select"
               onClick={() => onSelectForBid(l)}
             >
-              Choose pet to bid on
+              {myActiveBid ? "Raise your bid" : "Choose pet to bid on"}
             </button>
           )}
         </div>

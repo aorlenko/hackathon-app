@@ -10,6 +10,8 @@ type Props = {
   sellerTraderId: string;
   accessToken?: string;
   onChanged: () => void;
+  /** When true, show accept/reject for the active below-ask bid. */
+  hasPendingBid: boolean;
 };
 
 export const ListingSellerActions = ({
@@ -17,6 +19,7 @@ export const ListingSellerActions = ({
   sellerTraderId,
   accessToken,
   onChanged,
+  hasPendingBid,
 }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,26 +39,30 @@ export const ListingSellerActions = ({
 
   return (
     <div className="trading-pets-seller-actions">
-      <button
-        type="button"
-        className="secondary-button"
-        disabled={busy}
-        onClick={() =>
-          void run(() => acceptBid(listingId, { traderId: sellerTraderId }, accessToken))
-        }
-      >
-        Accept a below-ask bid
-      </button>
-      <button
-        type="button"
-        className="secondary-button"
-        disabled={busy}
-        onClick={() =>
-          void run(() => rejectBid(listingId, { traderId: sellerTraderId }, accessToken))
-        }
-      >
-        Reject current bid
-      </button>
+      {hasPendingBid ? (
+        <>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy}
+            onClick={() =>
+              void run(() => acceptBid(listingId, { traderId: sellerTraderId }, accessToken))
+            }
+          >
+            Accept a below-ask bid
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy}
+            onClick={() =>
+              void run(() => rejectBid(listingId, { traderId: sellerTraderId }, accessToken))
+            }
+          >
+            Reject current bid
+          </button>
+        </>
+      ) : null}
       <button
         type="button"
         className="secondary-button"

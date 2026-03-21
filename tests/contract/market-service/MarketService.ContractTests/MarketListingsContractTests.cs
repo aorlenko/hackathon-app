@@ -1,3 +1,4 @@
+using MarketService.Application.Abstractions;
 using MarketService.Application.Pets;
 using MarketService.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -57,5 +58,39 @@ public sealed class MarketListingsContractTests
 
         var lockedAfter = (await store.GetTraderSnapshotAsync(TraderTwo))!.LockedCash;
         Assert.Equal(0m, lockedAfter);
+    }
+
+    [Fact]
+    public async Task Seller_market_feed_includes_active_bid_other_viewers_do_not()
+    {
+        var harness = new TradingPlatformHarness();
+        var store = new MarketPetDataStore(
+            harness.MarketStore,
+            NullLogger<MarketPetDataStore>.Instance,
+            Options.Create(TradingPetsOptions.CreateForContractTestHarness()),
+            null,
+            null);
+
+        await store.PurchasePetsAsync(TraderOne, PoodleBreedId, 1);
+        var petId = (await store.GetTraderSnapshotAsync(TraderOne))!.Pets[0].Id;
+        var listingId = (await store.CreateListingAsync(TraderOne, petId, 200m))!.Value;
+
+        var bidResult = await store.PlaceBidAsync(TraderTwo, listingId, 50m);
+        Assert.IsType<ActiveBidPlaceResult>(bidResult);
+
+        var sellerRows = await store.GetMarketListingsAsync(TraderOne);
+        var sellerRow = sellerRows.Single(r => r.ListingId == listingId);
+        Assert.Equal(50m, sellerRow.ActiveBidAmount);
+        Assert.False(string.IsNullOrWhiteSpace(sellerRow.ActiveBidBuyerDisplayName));
+
+        var anonymousRows = await store.GetMarketListingsAsync(null);
+        var anonRow = anonymousRows.Single(r => r.ListingId == listingId);
+        Assert.Null(anonRow.ActiveBidAmount);
+        Assert.Null(anonRow.ActiveBidBuyerDisplayName);
+
+        var buyerRows = await store.GetMarketListingsAsync(TraderTwo);
+        var buyerRow = buyerRows.Single(r => r.ListingId == listingId);
+        Assert.Null(buyerRow.ActiveBidAmount);
+        Assert.Null(buyerRow.ActiveBidBuyerDisplayName);
     }
 }

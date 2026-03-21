@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using MarketService.Application.Abstractions;
 using MarketService.Application.Authorization;
 using MarketService.Application.Market;
@@ -48,10 +49,26 @@ public static class MarketTradingEndpoints
     }
 
     private static async Task<IResult> GetListingsAsync(
+        HttpContext httpContext,
         IMarketPetStore store,
         CancellationToken cancellationToken)
     {
-        var rows = await store.GetMarketListingsAsync(cancellationToken).ConfigureAwait(false);
+        Guid? viewerTraderId = null;
+        var sub = httpContext.User.FindFirst("sub")?.Value
+            ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrWhiteSpace(sub))
+        {
+            var displayName = httpContext.User.FindFirst("name")?.Value
+                ?? httpContext.User.FindFirst(ClaimTypes.Name)?.Value
+                ?? httpContext.User.FindFirst("email")?.Value
+                ?? sub;
+            var email = CurrentUserProfileReader.TryGetEmailClaim(httpContext.User);
+            viewerTraderId = await store
+                .EnsureLinkedTraderForUserAsync(sub, displayName, email, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var rows = await store.GetMarketListingsAsync(viewerTraderId, cancellationToken).ConfigureAwait(false);
         var payload = rows.Select(l => new
         {
             listingId = l.ListingId,
@@ -63,7 +80,9 @@ public static class MarketTradingEndpoints
             sellerEmail = l.SellerEmail,
             createdAt = l.CreatedAt,
             recentTradePriceForBreed = l.RecentTradePriceForBreed,
-            remainingNewSupplyForBreed = l.RemainingNewSupplyForBreed
+            remainingNewSupplyForBreed = l.RemainingNewSupplyForBreed,
+            activeBidAmount = l.ActiveBidAmount,
+            activeBidBuyerDisplayName = l.ActiveBidBuyerDisplayName
         });
         return Results.Ok(payload);
     }
@@ -185,7 +204,7 @@ public static class MarketTradingEndpoints
         if (result is ActiveBidPlaceResult pending)
         {
             await realtime.NotifyTraderSnapshotRefreshAsync(body.TraderId, cancellationToken).ConfigureAwait(false);
-            var listingRow = (await store.GetMarketListingsAsync(cancellationToken).ConfigureAwait(false))
+            var listingRow = (await store.GetMarketListingsAsync(cancellationToken: cancellationToken).ConfigureAwait(false))
                 .FirstOrDefault(l => l.ListingId == listingId);
             if (listingRow is not null)
             {
@@ -281,7 +300,9 @@ public static class MarketTradingEndpoints
             return guard;
         }
 
-        var ok = await handlers.RejectBidAsync(body.TraderId, listingId, cancellationToken).ConfigureAwait(false);
+        var (ok, buyerTraderId) = await handlers
+            .RejectBidAsync(body.TraderId, listingId, cancellationToken)
+            .ConfigureAwait(false);
         if (!ok)
         {
             return Results.Conflict(new { error = "no_pending_bid", message = "No active below-ask bid to reject." });
@@ -289,6 +310,12 @@ public static class MarketTradingEndpoints
 
         await realtime.NotifyMarketListingsRefreshAsync(cancellationToken).ConfigureAwait(false);
         await realtime.NotifyTraderSnapshotRefreshAsync(body.TraderId, cancellationToken).ConfigureAwait(false);
+        if (buyerTraderId.HasValue)
+        {
+            await realtime.NotifyTraderNotificationsAsync(buyerTraderId.Value, cancellationToken).ConfigureAwait(false);
+        }
+
+        await realtime.NotifyTraderNotificationsAsync(body.TraderId, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 

@@ -26,7 +26,10 @@ public interface IMarketPetStore
         Guid traderId,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<MarketListingRow>> GetMarketListingsAsync(CancellationToken cancellationToken = default);
+    /// <param name="viewerTraderId">When set, active below-ask bids are included only for that trader's own listings (seller view).</param>
+    Task<IReadOnlyList<MarketListingRow>> GetMarketListingsAsync(
+        Guid? viewerTraderId = null,
+        CancellationToken cancellationToken = default);
 
     Task<Guid?> CreateListingAsync(Guid traderId, Guid petId, decimal askingPrice, CancellationToken cancellationToken = default);
 
@@ -38,7 +41,11 @@ public interface IMarketPetStore
 
     Task<TradeResultRow?> AcceptBidAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default);
 
-    Task<bool> RejectBidAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default);
+    /// <returns>Whether the reject succeeded and the buyer trader id (for realtime notification fan-out).</returns>
+    Task<(bool ok, Guid? buyerTraderId)> RejectBidAsync(
+        Guid traderId,
+        Guid listingId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Resale (peer) trades where the given Auth0/OIDC <paramref name="externalUserSub"/> is buyer or seller.</summary>
     Task<IReadOnlyList<PetResaleTradeHistoryRow>> GetResaleTradesForExternalUserAsync(
@@ -102,7 +109,9 @@ public sealed record MarketListingRow(
     string? SellerEmail,
     DateTimeOffset CreatedAt,
     decimal? RecentTradePriceForBreed,
-    int RemainingNewSupplyForBreed);
+    int RemainingNewSupplyForBreed,
+    decimal? ActiveBidAmount,
+    string? ActiveBidBuyerDisplayName);
 
 public sealed record TradeResultRow(
     Guid TradeId,

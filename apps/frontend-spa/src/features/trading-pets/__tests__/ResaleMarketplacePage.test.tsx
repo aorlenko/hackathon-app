@@ -135,4 +135,80 @@ describe("ResaleMarketplacePage", () => {
       within(screen.getByRole("region", { name: /others' offers/i })).getByText(/no other traders have pets listed/i),
     ).toBeInTheDocument();
   });
+
+  it("does not flash column loading text when hub invalidates after an empty initial load", async () => {
+    getMarketListings.mockResolvedValue([]);
+    const { rerender } = render(
+      <MemoryRouter>
+        <ResaleMarketplacePage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(getMarketListings).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/Loading your listings/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Loading others' offers/i)).not.toBeInTheDocument();
+
+    let resolveSecond!: (value: MarketListingDto[]) => void;
+    getMarketListings.mockImplementation(
+      () =>
+        new Promise<MarketListingDto[]>((resolve) => {
+          resolveSecond = resolve;
+        }),
+    );
+
+    mockUseMyPetTrader.mockReturnValue({
+      traderId: me,
+      snapshot: baseSnapshot,
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+      hubInvalidateSeq: 1,
+    });
+    rerender(
+      <MemoryRouter>
+        <ResaleMarketplacePage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText(/Loading your listings/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Loading others' offers/i)).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: /your listings/i })).getByText(/no active listings/i),
+    ).toBeInTheDocument();
+
+    resolveSecond!([]);
+    await waitFor(() => expect(getMarketListings).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows the buyer their pending bid in others offers instead of choose-to-bid", async () => {
+    mockUseMyPetTrader.mockReturnValue({
+      traderId: me,
+      snapshot: {
+        ...baseSnapshot,
+        myBids: [
+          {
+            bidId: "bid-1",
+            listingId: "L-other",
+            petId: "pet-other",
+            amount: 42,
+            status: "Active",
+          },
+        ],
+      },
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+      hubInvalidateSeq: 0,
+    });
+    render(
+      <MemoryRouter>
+        <ResaleMarketplacePage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(getMarketListings).toHaveBeenCalled());
+    const othersRegion = screen.getByRole("region", { name: /others' offers/i });
+    expect(within(othersRegion).getByText(/Your pending bid/i)).toBeInTheDocument();
+    expect(within(othersRegion).getByText("$42.00")).toBeInTheDocument();
+    expect(within(othersRegion).getByRole("button", { name: /raise your bid/i })).toBeInTheDocument();
+    expect(within(othersRegion).queryByRole("button", { name: /choose pet to bid on/i })).not.toBeInTheDocument();
+  });
 });

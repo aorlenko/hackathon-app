@@ -277,7 +277,9 @@ public sealed class MarketPetDataStore : IMarketPetStore
             bidRows);
     }
 
-    public async Task<IReadOnlyList<MarketListingRow>> GetMarketListingsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MarketListingRow>> GetMarketListingsAsync(
+        Guid? viewerTraderId = null,
+        CancellationToken cancellationToken = default)
     {
         var listings = await _db.Listings
             .AsNoTracking()
@@ -316,7 +318,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
                 StringComparer.Ordinal);
         }
 
-        return listings
+        var rows = listings
             .Where(l => l.Pet?.Breed is not null && l.Seller is not null)
             .Select(l =>
             {
@@ -354,8 +356,54 @@ public sealed class MarketPetDataStore : IMarketPetStore
                     sellerEmail,
                     l.CreatedAt,
                     recent,
-                    breed.Supply?.RemainingCount ?? 0);
+                    breed.Supply?.RemainingCount ?? 0,
+                    null,
+                    null);
             })
+            .ToList();
+
+        if (!viewerTraderId.HasValue)
+        {
+            return rows;
+        }
+
+        var myListingIds = rows
+            .Where(r => r.SellerTraderId == viewerTraderId.Value)
+            .Select(r => r.ListingId)
+            .ToList();
+        if (myListingIds.Count == 0)
+        {
+            return rows;
+        }
+
+        var activeBids = await _db.Bids
+            .AsNoTracking()
+            .Include(b => b.Buyer)
+            .Where(b => myListingIds.Contains(b.ListingId) && b.Status == BidStatus.Active)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var sellerBidByListing = new Dictionary<Guid, (decimal Amount, string BuyerLabel)>();
+        foreach (var bid in activeBids)
+        {
+            if (bid.Buyer is null)
+            {
+                continue;
+            }
+
+            var label = await GetPublicTraderLabelAsync(bid.Buyer, cancellationToken).ConfigureAwait(false);
+            sellerBidByListing[bid.ListingId] = (bid.Amount, label);
+        }
+
+        return rows
+            .Select(r =>
+                sellerBidByListing.TryGetValue(r.ListingId, out var bid)
+                    ? r with
+                    {
+                        ActiveBidAmount = bid.Amount,
+                        ActiveBidBuyerDisplayName = bid.BuyerLabel,
+                    }
+                    : r)
             .ToList();
     }
 
@@ -631,7 +679,10 @@ public sealed class MarketPetDataStore : IMarketPetStore
             trade.ExecutedAt);
     }
 
-    public async Task<bool> RejectBidAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default)
+    public async Task<(bool ok, Guid? buyerTraderId)> RejectBidAsync(
+        Guid traderId,
+        Guid listingId,
+        CancellationToken cancellationToken = default)
     {
         await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var listing = await _db.Listings
@@ -642,7 +693,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             .ConfigureAwait(false);
         if (listing is null || listing.WithdrawnAt is not null || listing.SellerTraderId != traderId)
         {
-            return false;
+            return (false, null);
         }
 
         var bid = await _db.Bids
@@ -653,12 +704,13 @@ public sealed class MarketPetDataStore : IMarketPetStore
             .ConfigureAwait(false);
         if (bid is null || bid.Amount >= listing.AskingPrice)
         {
-            return false;
+            return (false, null);
         }
 
         await ReleaseBidLockAsync(bid, cancellationToken).ConfigureAwait(false);
         bid.Status = BidStatus.Rejected;
         await AddBidRejectedNotificationAsync(listing, bid, cancellationToken).ConfigureAwait(false);
+        await AddSellerRejectedBidNotificationAsync(listing, bid, cancellationToken).ConfigureAwait(false);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         if (bid.Buyer is not null)
@@ -666,7 +718,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             await PublishFundsLinkedAsync(bid.Buyer, cancellationToken).ConfigureAwait(false);
         }
 
-        return true;
+        return (true, bid.BuyerTraderId);
     }
 
     public async Task<PetAnalysisRow?> GetPetAnalysisAsync(
@@ -1324,6 +1376,34 @@ public sealed class MarketPetDataStore : IMarketPetStore
             bid.Amount,
             listing.SellerTraderId,
             sellerLabel,
+            bid.Id.ToString(),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task AddSellerRejectedBidNotificationAsync(Listing listing, Bid bid, CancellationToken cancellationToken)
+    {
+        if (listing.Seller is null)
+        {
+            return;
+        }
+
+        var buyer = bid.Buyer ?? await _db.Traders
+            .FirstOrDefaultAsync(t => t.Id == bid.BuyerTraderId, cancellationToken)
+            .ConfigureAwait(false);
+        if (buyer is null)
+        {
+            return;
+        }
+
+        var buyerLabel = await GetPublicTraderLabelAsync(buyer, cancellationToken).ConfigureAwait(false);
+        await AddNotificationAsync(
+            listing.SellerTraderId,
+            NotificationType.SellerRejectedBid,
+            listing.PetId,
+            PetDisplayName(listing.Pet),
+            bid.Amount,
+            bid.BuyerTraderId,
+            buyerLabel,
             bid.Id.ToString(),
             cancellationToken).ConfigureAwait(false);
     }

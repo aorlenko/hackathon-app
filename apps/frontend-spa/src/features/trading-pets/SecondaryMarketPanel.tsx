@@ -3,7 +3,9 @@ import {
   getMarketListings,
   type MarketListingDto,
   type PetSummaryDto,
+  type TraderSnapshotDto,
 } from "./tradingPetsApi";
+import { findActiveMyBidForListing, minRaiseBidAmount } from "./tradingPetsBidUtils";
 import { ResaleMarketListingRow } from "./ResaleMarketListingRow";
 import { ResaleOfferPetForm } from "./ResaleOfferPetForm";
 import { ResalePlaceBidPanel } from "./ResalePlaceBidPanel";
@@ -13,6 +15,8 @@ type Props = {
   accessToken?: string;
   reloadToken: number;
   inventory: PetSummaryDto[];
+  /** Optional; when provided, rows show your pending bids (same as trader snapshot). */
+  myBids?: TraderSnapshotDto["myBids"];
   onChanged: () => void;
 };
 
@@ -21,6 +25,7 @@ export const SecondaryMarketPanel = ({
   accessToken,
   reloadToken,
   inventory,
+  myBids,
   onChanged,
 }: Props) => {
   const [listings, setListings] = useState<MarketListingDto[]>([]);
@@ -33,6 +38,13 @@ export const SecondaryMarketPanel = ({
     () => listings.find((l) => l.listingId === bidListingId) ?? null,
     [listings, bidListingId],
   );
+
+  const selectedListingPendingBidAmount = useMemo(() => {
+    if (!selectedListing) {
+      return null;
+    }
+    return findActiveMyBidForListing(myBids, selectedListing.listingId)?.amount ?? null;
+  }, [selectedListing, myBids]);
 
   useEffect(() => {
     if (bidListingId && !listings.some((l) => l.listingId === bidListingId)) {
@@ -69,8 +81,13 @@ export const SecondaryMarketPanel = ({
     if (l.sellerTraderId === traderId) {
       return;
     }
+    const existing = findActiveMyBidForListing(myBids, l.listingId);
+    if (existing) {
+      setBidAmount(minRaiseBidAmount(existing.amount));
+    } else {
+      setBidAmount(Math.max(1, Math.round(l.askingPrice * 100) / 100));
+    }
     setBidListingId(l.listingId);
-    setBidAmount(Math.max(1, Math.round(l.askingPrice * 100) / 100));
   };
 
   return (
@@ -100,27 +117,34 @@ export const SecondaryMarketPanel = ({
             <p className="muted small trading-pets-panel-loading">Loading pets for sale…</p>
           ) : null}
           <ul className="trading-pets-list trading-pets-listings">
-            {listings.map((l) => (
-              <ResaleMarketListingRow
-                key={l.listingId}
-                listing={l}
-                traderId={traderId}
-                accessToken={accessToken}
-                bidListingId={bidListingId}
-                allowBidSelection={l.sellerTraderId !== traderId}
-                onSelectForBid={onSelectForBid}
-                onSellerSideChanged={() => {
-                  void load();
-                  onChanged();
-                }}
-              />
-            ))}
+            {listings.map((l) => {
+              const active = findActiveMyBidForListing(myBids, l.listingId);
+              return (
+                <ResaleMarketListingRow
+                  key={l.listingId}
+                  listing={l}
+                  traderId={traderId}
+                  accessToken={accessToken}
+                  bidListingId={bidListingId}
+                  allowBidSelection={l.sellerTraderId !== traderId}
+                  onSelectForBid={onSelectForBid}
+                  onSellerSideChanged={() => {
+                    void load();
+                    onChanged();
+                  }}
+                  myActiveBid={
+                    active ? { bidId: active.bidId, amount: active.amount } : null
+                  }
+                />
+              );
+            })}
           </ul>
         </div>
         <ResalePlaceBidPanel
           traderId={traderId}
           accessToken={accessToken}
           selectedListing={selectedListing}
+          selectedListingPendingBidAmount={selectedListingPendingBidAmount}
           onClearBidSelection={() => setBidListingId("")}
           bidAmount={bidAmount}
           onBidAmountChange={setBidAmount}

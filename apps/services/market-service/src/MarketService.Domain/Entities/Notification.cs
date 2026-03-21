@@ -8,7 +8,9 @@ public enum NotificationType
     BidWithdrawn = 3,
     Outbid = 4,
     ListingRemoved = 5,
-    TradeCompleted = 6
+    TradeCompleted = 6,
+    /// <summary>Seller rejected a below-ask bid; recipient is the listing owner.</summary>
+    SellerRejectedBid = 7
 }
 
 public sealed class Notification

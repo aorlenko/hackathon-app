@@ -37,13 +37,41 @@ export const useTradingPetsRealtime = ({
     let disconnectTimer: number | undefined;
     let cancelled = false;
 
+    const pullNotifications = () => {
+      void notificationsHintRef.current?.();
+    };
+
+    const tickPoll = () => {
+      void refreshRef.current();
+      pullNotifications();
+    };
+
     const startPoll = () => {
       if (pollTimer) {
         window.clearInterval(pollTimer);
       }
       pollTimer = window.setInterval(() => {
-        void refreshRef.current();
+        tickPoll();
       }, POLL_MS);
+    };
+
+    const subscribeTradingPetsGroups = async () => {
+      const inv = connection.invoke.bind(connection);
+      try {
+        await inv("SubscribeTradingPetsTrader", traderId);
+      } catch {
+        /* trader group optional for snapshot; market group still useful */
+      }
+      try {
+        await inv("SubscribeTradingPetsMarket");
+      } catch {
+        /* listings + reject fan-out use this group */
+      }
+      try {
+        await inv("SubscribeTradingPetsLeaderboard");
+      } catch {
+        /* optional */
+      }
     };
 
     const stopPoll = () => {
@@ -63,10 +91,13 @@ export const useTradingPetsRealtime = ({
 
     const bind = async () => {
       connection.on("trader.snapshotUpdated", () => void refreshRef.current());
-      connection.on("market.listingsUpdated", () => void refreshRef.current());
+      connection.on("market.listingsUpdated", () => {
+        void refreshRef.current();
+        pullNotifications();
+      });
       connection.on("trader.notificationsAdded", () => {
         void refreshRef.current();
-        void notificationsHintRef.current?.();
+        pullNotifications();
       });
       connection.on("leaderboard.updated", () => void refreshRef.current());
       connection.on("pet.valuationBatch", () => void refreshRef.current());
@@ -84,12 +115,10 @@ export const useTradingPetsRealtime = ({
           window.clearTimeout(disconnectTimer);
           disconnectTimer = undefined;
         }
-        await connection.invoke("SubscribeTradingPetsTrader", traderId);
-        await connection.invoke("SubscribeTradingPetsMarket");
-        await connection.invoke("SubscribeTradingPetsLeaderboard");
+        await subscribeTradingPetsGroups();
       } catch {
         if (!cancelled) {
-          // Hub is up but group subscribe failed — poll now so listings/notifications still converge.
+          // Hub is up but start/subscribe failed — poll so listings, snapshot, and notification toasts still converge.
           if (connection.state === HubConnectionState.Connected) {
             startPoll();
           } else {
@@ -105,9 +134,7 @@ export const useTradingPetsRealtime = ({
       stopPoll();
       void (async () => {
         try {
-          await connection.invoke("SubscribeTradingPetsTrader", traderId);
-          await connection.invoke("SubscribeTradingPetsMarket");
-          await connection.invoke("SubscribeTradingPetsLeaderboard");
+          await subscribeTradingPetsGroups();
         } catch {
           if (connection.state === HubConnectionState.Connected) {
             startPoll();

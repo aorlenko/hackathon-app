@@ -51,6 +51,9 @@ export type MarketListingDto = {
   createdAt: string;
   recentTradePriceForBreed: number | null;
   remainingNewSupplyForBreed: number;
+  /** Present only on your own listings: active below-ask bid the seller can accept or reject. */
+  activeBidAmount?: number | null;
+  activeBidBuyerDisplayName?: string | null;
 };
 
 export const getBreeds = (accessToken?: string) =>

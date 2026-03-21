@@ -12,6 +12,8 @@ export function notificationLabel(type: string): string {
       return "Bid accepted";
     case "BidRejected":
       return "Bid rejected";
+    case "SellerRejectedBid":
+      return "You rejected a bid";
     case "BidWithdrawn":
       return "Bid withdrawn";
     case "Outbid":
@@ -30,6 +32,7 @@ export function notificationVariant(type: string): NotificationVisualVariant {
     case "BidReceived":
     case "BidAccepted":
     case "BidRejected":
+    case "SellerRejectedBid":
     case "BidWithdrawn":
     case "Outbid":
       return "bid";

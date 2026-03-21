@@ -104,7 +104,8 @@ jobs:
       - infra-validate
       - frontend
       - backend
-    if: ${{ github.event_name != 'pull_request' && vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != '' && secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+    # secrets.* is not allowed in job-level `if` (use a step to read secrets; see first step below).
+    if: ${{ github.event_name != 'pull_request' && vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -126,10 +127,22 @@ jobs:
             context: apps/services/settlement-service
             repository: settlement-service
     steps:
+      - name: Check Azure OIDC secrets
+        id: azure_creds
+        run: |
+          if [ -n "${{ secrets.AZURE_CLIENT_ID }}" ] && [ -n "${{ secrets.AZURE_TENANT_ID }}" ] && [ -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping container image build: Azure OIDC secrets (AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID) are not all set."
+          fi
+
       - name: Checkout
+        if: steps.azure_creds.outputs.ok == 'true'
         uses: actions/checkout@v4
 
       - name: Azure login
+        if: steps.azure_creds.outputs.ok == 'true'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -137,9 +150,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to Azure Container Registry
+        if: steps.azure_creds.outputs.ok == 'true'
         run: az acr login --name "${{ vars.ACR_NAME }}"
 
       - name: Build and push ${{ matrix.name }} image
+        if: steps.azure_creds.outputs.ok == 'true'
         run: |
           if [ ! -f "${{ matrix.dockerfile }}" ]; then
             echo "Skipping ${{ matrix.name }} because ${{ matrix.dockerfile }} is not present yet."

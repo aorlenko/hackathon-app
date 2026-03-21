@@ -10,6 +10,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from "react";
@@ -56,9 +57,8 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
     null,
   );
   const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
-  const [bootstrappedUserId, setBootstrappedUserId] = useState<string | null>(
-    null,
-  );
+  /** Avoid duplicate bootstraps, but allow a second call when `user.email` arrives after the first (fixes placeholder trader-*@demo.local). */
+  const lastSuccessfulBootstrapKeyRef = useRef<string | null>(null);
 
   const login = useCallback(async () => {
     const options: RedirectLoginOptions<AppState> = {
@@ -87,7 +87,6 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
       setAccessToken(undefined);
       setIsResolvingAccessToken(false);
       setAccountSnapshot(null);
-      setBootstrappedUserId(null);
       setIsBootstrappingAccount(false);
       return;
     }
@@ -120,17 +119,23 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
   }, [auth0]);
 
   useEffect(() => {
-    const userId = auth0.user?.sub ?? null;
-    if (!auth0.isAuthenticated || !accessToken || !userId) {
+    if (!auth0.isAuthenticated) {
+      lastSuccessfulBootstrapKeyRef.current = null;
       setIsBootstrappingAccount(false);
-      if (!auth0.isAuthenticated) {
-        setAccountSnapshot(null);
-        setBootstrappedUserId(null);
-      }
+      setAccountSnapshot(null);
       return;
     }
 
-    if (bootstrappedUserId === userId) {
+    const userId = auth0.user?.sub ?? null;
+    const email = auth0.user?.email?.trim() ?? "";
+
+    if (auth0.isLoading || !accessToken || !userId) {
+      setIsBootstrappingAccount(false);
+      return;
+    }
+
+    const bootstrapKey = `${userId}\0${email}`;
+    if (lastSuccessfulBootstrapKeyRef.current === bootstrapKey) {
       return;
     }
 
@@ -143,14 +148,14 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
     void bootstrapDemoAccount(
       {
         displayName: pickFriendlyDisplayName(auth0.user),
-        email: auth0.user?.email,
+        email: email || undefined,
       },
       accessToken,
     )
       .then((snapshot) => {
         if (active) {
           setAccountSnapshot(snapshot);
-          setBootstrappedUserId(userId);
+          lastSuccessfulBootstrapKeyRef.current = bootstrapKey;
         }
       })
       .catch((error: unknown) => {
@@ -168,10 +173,10 @@ const Auth0ContextBridge = ({ children }: PropsWithChildren) => {
   }, [
     accessToken,
     auth0.isAuthenticated,
+    auth0.isLoading,
     auth0.user,
     auth0.user?.email,
     auth0.user?.sub,
-    bootstrappedUserId,
   ]);
 
   const authError = auth0.error ? auth0.error.message : null;

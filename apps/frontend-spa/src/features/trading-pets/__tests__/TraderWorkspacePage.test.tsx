@@ -6,10 +6,6 @@ import { useMyPetTrader } from "../MyPetTraderContext";
 import type { TraderSnapshotDto } from "../tradingPetsApi";
 import * as api from "../tradingPetsApi";
 
-vi.mock("../useTradingPetsRealtime", () => ({
-  useTradingPetsRealtime: () => {},
-}));
-
 vi.mock("../../auth/AuthProvider", () => ({
   useTradingAuth: () => ({ accessToken: "test-token" }),
 }));
@@ -70,6 +66,7 @@ describe("TraderWorkspacePage", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
+      hubInvalidateSeq: 0,
     });
   });
 

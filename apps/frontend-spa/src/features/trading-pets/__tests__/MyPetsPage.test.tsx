@@ -40,6 +40,7 @@ describe("MyPetsPage", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
+      hubInvalidateSeq: 0,
     });
   });
 

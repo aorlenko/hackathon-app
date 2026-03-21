@@ -2,22 +2,22 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { PET_TRADER_SNAPSHOT_UPDATED } from "./petTraderSnapshotEvents";
-import type { TraderSnapshotDto } from "./tradingPetsApi";
+import { getMyTraderSnapshot, type TraderSnapshotDto } from "./tradingPetsApi";
 
 /**
- * Pet trader balances inside {@link auth-panel__summary} (pet routes only).
- * Synced via {@link emitPetTraderSnapshotUpdated} from MyPetTraderProvider.
+ * Pet trader balances in the header. On `/pets/*`, {@link MyPetTraderProvider}
+ * pushes updates via {@link emitPetTraderSnapshotUpdated}. On other authenticated
+ * routes (e.g. `/history/*`), we load the snapshot here because that provider is not mounted.
  */
 export const PetTraderAuthSummaryMetrics = () => {
   const auth = useTradingAuth();
   const location = useLocation();
   const [snapshot, setSnapshot] = useState<TraderSnapshotDto | null>(null);
 
-  const inPetRealm =
-    auth.isAuthenticated && location.pathname.startsWith("/pets");
+  const onPetRoutes = location.pathname.startsWith("/pets");
 
   useEffect(() => {
-    if (!inPetRealm) {
+    if (!auth.isAuthenticated || !auth.accessToken) {
       setSnapshot(null);
       return;
     }
@@ -30,10 +30,29 @@ export const PetTraderAuthSummaryMetrics = () => {
     };
 
     window.addEventListener(PET_TRADER_SNAPSHOT_UPDATED, onUpdate);
-    return () => window.removeEventListener(PET_TRADER_SNAPSHOT_UPDATED, onUpdate);
-  }, [inPetRealm]);
 
-  if (!inPetRealm || !snapshot?.traderId) {
+    if (onPetRoutes) {
+      return () => window.removeEventListener(PET_TRADER_SNAPSHOT_UPDATED, onUpdate);
+    }
+
+    let cancelled = false;
+    void getMyTraderSnapshot(auth.accessToken)
+      .then((s) => {
+        if (!cancelled && s?.traderId) {
+          setSnapshot(s);
+        }
+      })
+      .catch(() => {
+        /* keep prior snapshot if any */
+      });
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(PET_TRADER_SNAPSHOT_UPDATED, onUpdate);
+    };
+  }, [auth.accessToken, auth.isAuthenticated, onPetRoutes]);
+
+  if (!auth.isAuthenticated || !snapshot?.traderId) {
     return null;
   }
 

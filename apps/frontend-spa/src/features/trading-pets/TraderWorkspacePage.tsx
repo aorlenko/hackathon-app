@@ -1,43 +1,15 @@
-import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { useMyPetTrader } from "./MyPetTraderContext";
 import { PrimaryMarketPanel } from "./PrimaryMarketPanel";
 import { SecondaryMarketPanel } from "./SecondaryMarketPanel";
-import { TradingPetToastStack } from "./TradingPetToastStack";
-import { useTraderNotificationToasts } from "./useTraderNotificationToasts";
-import { useTradingPetsRealtime } from "./useTradingPetsRealtime";
 
 export const TraderWorkspacePage = () => {
   const auth = useTradingAuth();
-  const { traderId, snapshot, error: traderError, refresh } = useMyPetTrader();
-  const [panelTick, setPanelTick] = useState(0);
-
-  const { toasts, dismissToast, onTraderNotificationsAdded } = useTraderNotificationToasts(
-    traderId,
-    auth.accessToken,
-  );
-
-  const onRealtimeInvalidate = useCallback(async () => {
-    setPanelTick((n) => n + 1);
-    try {
-      await refresh();
-    } catch {
-      /* snapshot optional for cross-user listing updates */
-    }
-  }, [refresh]);
-
-  useTradingPetsRealtime({
-    traderId,
-    accessToken: auth.accessToken,
-    onRefreshSnapshot: onRealtimeInvalidate,
-    onTraderNotificationsAdded,
-  });
+  const { traderId, snapshot, error: traderError, refresh, hubInvalidateSeq } = useMyPetTrader();
 
   return (
     <div className="trading-pets-workspace">
-      <TradingPetToastStack toasts={toasts} onDismiss={dismissToast} />
-
       <header className="trading-pets-page__header">
         <h1>Pet marketplace workspace</h1>
         <p className="muted trading-pets-page__intro trading-pets-page__intro--full">
@@ -69,7 +41,7 @@ export const TraderWorkspacePage = () => {
           <PrimaryMarketPanel
             traderId={traderId}
             accessToken={auth.accessToken}
-            reloadToken={panelTick}
+            reloadToken={hubInvalidateSeq}
             onPurchased={() => void refresh()}
           />
         </section>
@@ -82,7 +54,7 @@ export const TraderWorkspacePage = () => {
           <SecondaryMarketPanel
             traderId={traderId}
             accessToken={auth.accessToken}
-            reloadToken={panelTick}
+            reloadToken={hubInvalidateSeq}
             inventory={snapshot?.pets ?? []}
             onChanged={() => void refresh()}
           />

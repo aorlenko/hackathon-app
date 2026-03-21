@@ -231,6 +231,10 @@ select {
 
 .app-content {
   padding: 1.5rem 2rem 2rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .stack {
@@ -972,16 +976,15 @@ select {
   letter-spacing: -0.02em;
 }
 
-.trading-pets-page__header > p.muted,
+.trading-pets-page__header > p.muted {
+  margin: 0;
+  max-width: none;
+  width: 100%;
+}
+
 .trading-pets-page__header-top .muted {
   margin: 0;
   max-width: 52ch;
-}
-
-/* Beats rule above: intro paragraphs that should use full content width */
-.trading-pets-page__header > p.muted.trading-pets-page__intro--full {
-  max-width: none;
-  width: 100%;
 }
 
 .trading-pets-page__header-top {

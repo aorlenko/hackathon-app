@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { getMarketListings, type MarketListingDto } from "./tradingPetsApi";
 import { Link } from "react-router-dom";
 import { useMyPetTrader } from "./MyPetTraderContext";
 import { listingSellerClause } from "./listingSellerLabel";
-import { useTradingPetsRealtime } from "./useTradingPetsRealtime";
 
 export const MarketListingsPage = () => {
   const auth = useTradingAuth();
-  const { traderId } = useMyPetTrader();
+  const { traderId, hubInvalidateSeq } = useMyPetTrader();
   const [rows, setRows] = useState<MarketListingDto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const skipNextHubInvalidateEffect = useRef(true);
 
   const load = useCallback(async () => {
     setError(null);
@@ -25,11 +25,13 @@ export const MarketListingsPage = () => {
     void load();
   }, [load]);
 
-  useTradingPetsRealtime({
-    traderId,
-    accessToken: auth.accessToken,
-    onRefreshSnapshot: load,
-  });
+  useEffect(() => {
+    if (skipNextHubInvalidateEffect.current) {
+      skipNextHubInvalidateEffect.current = false;
+      return;
+    }
+    void load();
+  }, [hubInvalidateSeq, load]);
 
   return (
     <div className="trading-pets-page">

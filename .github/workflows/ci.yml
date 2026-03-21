@@ -13,6 +13,8 @@ permissions:
   contents: read
   id-token: write
 
+# Job-level `if` must not use `hashFiles()` or `secrets.*` (GitHub rejects them). Use step outputs to gate on secrets; keep path guards at step level if needed.
+
 jobs:
   infra-validate:
     name: Validate infra and root orchestration

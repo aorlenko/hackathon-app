@@ -164,6 +164,7 @@ Map Azure CLI / Actions output to a **category** so operators know what to fix f
 | **Secret** | Script messages like `[secret/config] SQL_ADMIN_PASSWORD`, Key Vault / SQL login failures, “password required” | GitHub secrets, `SQL_ADMIN_LOGIN` / `SQL_ADMIN_PASSWORD`, Key Vault access |
 | **RBAC** | `Authorization failed`, `403`, `does not have authorization` on subscription or RG | Role assignments for the OIDC service principal |
 | **Quota** | `QuotaExceeded`, `Operation could not be completed`, capacity / SKU unavailable in region | Subscription quotas, try another region, request increase |
+| **SQL region** | `ProvisioningDisabled`, “Provisioning is restricted in this region” on `Microsoft.Sql/servers` | Run **deploy-hackathon** with workflow input **`location`** set to an allowed region (often **`eastus`**); subscription type may block SQL in some geographies |
 | **Parameter** | `[parameter]` in script output, Bicep compile errors, JSON parse errors for `parameters.dev.json` | Parameter file syntax, path to `main.bicep`, CLI `--parameters` names |
 | **ARM policy** | `RequestDisallowedByPolicy`, policy definition names in error text | Azure Policy exemptions or template alignment with policy |
 | **CI / images** | **Build and push container images** job **Skipped** or notice “Azure OIDC secrets … not all set” | Section **3**: repository **Variables** `ACR_NAME`, `ACR_LOGIN_SERVER`; **repository** secrets for OIDC; federated credential for **branch** (not only `environment:hackathon`); **AcrPush** on ACR |

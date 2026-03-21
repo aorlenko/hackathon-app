@@ -354,6 +354,11 @@ resource marketService 'Microsoft.App/containerApps@2024-03-01' = {
       '${marketIdentity.id}': {}
     }
   }
+  // Resolve Key Vault refs only after RBAC exists (avoids "Unable to fetch secret" races with ARM parallelism).
+  dependsOn: [
+    marketKeyVaultUser
+    marketAcrPull
+  ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
     configuration: {
@@ -463,6 +468,10 @@ resource tradeService 'Microsoft.App/containerApps@2024-03-01' = {
       '${tradeIdentity.id}': {}
     }
   }
+  dependsOn: [
+    tradeKeyVaultUser
+    tradeAcrPull
+  ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
     configuration: {
@@ -572,6 +581,10 @@ resource settlementService 'Microsoft.App/containerApps@2024-03-01' = {
       '${settlementIdentity.id}': {}
     }
   }
+  dependsOn: [
+    settlementKeyVaultUser
+    settlementAcrPull
+  ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
     configuration: {
@@ -681,6 +694,10 @@ resource frontendSpa 'Microsoft.App/containerApps@2024-03-01' = {
       '${frontendIdentity.id}': {}
     }
   }
+  dependsOn: [
+    frontendKeyVaultUser
+    frontendAcrPull
+  ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
     configuration: {

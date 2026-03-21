@@ -61,24 +61,25 @@ jobs:
       AUTH0_CLIENT_ID: ${{ vars.AUTH0_CLIENT_ID }}
       ALERT_EMAIL_ADDRESS: ${{ vars.ALERT_EMAIL_ADDRESS }}
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Azure login
+      - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Validate Bicep
+      - name: Validate Bicep templates and hackathon parameters JSON
         shell: pwsh
         run: ./scripts/infra/validate-bicep.ps1
 
-      - name: Ensure resource group exists
+      - name: Ensure resource group exists (idempotent)
+        shell: pwsh
         run: az group create --name "${{ inputs.resourceGroupName }}" --location "${{ inputs.location }}"
 
-      - name: What-if deployment
+      - name: ARM what-if (preview changes)
         shell: pwsh
         run: >
           ./scripts/infra/deploy-hackathon.ps1
@@ -91,7 +92,7 @@ jobs:
           -TradeServiceImage "${{ inputs.tradeServiceImage }}"
           -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
 
-      - name: Deploy infrastructure and apps
+      - name: Deploy infrastructure and container apps
         shell: pwsh
         run: >
           ./scripts/infra/deploy-hackathon.ps1
@@ -103,10 +104,11 @@ jobs:
           -TradeServiceImage "${{ inputs.tradeServiceImage }}"
           -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
 
-      - name: Resolve container app endpoints
+      - name: Resolve Container Apps FQDNs for smoke checks
         id: endpoints
         shell: bash
         run: |
+          set -euo pipefail
           PROJECT_NAME=$(jq -r '.parameters.projectName.value' infra/environments/hackathon/parameters.dev.json)
           ENV_NAME="${{ inputs.environmentName }}"
           RG="${{ inputs.resourceGroupName }}"
@@ -126,7 +128,7 @@ jobs:
           echo "trade_api_url=$TRADE_API_URL" >> "$GITHUB_OUTPUT"
           echo "settlement_api_url=$SETTLEMENT_API_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Run smoke checks
+      - name: Run HTTP smoke checks (frontend + API /health)
         if: ${{ inputs.runSmoke }}
         shell: pwsh
         env:

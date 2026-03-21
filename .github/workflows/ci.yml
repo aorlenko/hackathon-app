@@ -31,23 +31,19 @@ jobs:
       - name: Validate docker compose
         run: npm run compose:config
 
-      - name: Install Azure CLI and PowerShell 7
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https software-properties-common
-          . /etc/os-release
-          wget -q "https://packages.microsoft.com/config/ubuntu/${VERSION_ID}/packages-microsoft-prod.deb"
-          sudo dpkg -i packages-microsoft-prod.deb
-          sudo apt-get update
-          sudo apt-get install -y powershell
-          az bicep version >/dev/null 2>&1 || az bicep install
+      # Runner has Docker + Node; install Azure CLI only (no pwsh — matches validate-bicep.ps1 targets).
+      - name: Install Azure CLI
+        run: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
       - name: Validate Bicep templates
-        shell: pwsh
-        run: npm run infra:validate
+        run: |
+          set -e
+          az bicep version >/dev/null 2>&1 || az bicep install
+          az bicep build --file infra/bicep/modules/monitoring.bicep
+          az bicep build --file infra/bicep/main.bicep
+
+      - name: Validate hackathon parameters JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('infra/environments/hackathon/parameters.dev.json','utf8'))"
 
   frontend:
     name: Frontend lint and tests

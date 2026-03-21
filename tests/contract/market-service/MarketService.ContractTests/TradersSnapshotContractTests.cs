@@ -20,6 +20,7 @@ public sealed class TradersSnapshotContractTests
             harness.MarketStore,
             NullLogger<MarketPetDataStore>.Instance,
             Options.Create(TradingPetsOptions.CreateForContractTestHarness()),
+            null,
             null);
 
         var beforeB = await store.GetTraderSnapshotAsync(TraderTwo);
@@ -46,6 +47,7 @@ public sealed class TradersSnapshotContractTests
             harness.MarketStore,
             NullLogger<MarketPetDataStore>.Instance,
             Options.Create(new TradingPetsOptions()),
+            null,
             null);
 
         var id1 = await store.EnsureLinkedTraderForUserAsync("auth0|linked-user", "Linked User");

@@ -40,6 +40,11 @@ public interface IMarketPetStore
 
     Task<bool> RejectBidAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default);
 
+    /// <summary>Resale (peer) trades where the given Auth0/OIDC <paramref name="externalUserSub"/> is buyer or seller.</summary>
+    Task<IReadOnlyList<PetResaleTradeHistoryRow>> GetResaleTradesForExternalUserAsync(
+        string externalUserSub,
+        CancellationToken cancellationToken = default);
+
     Task<PetAnalysisRow?> GetPetAnalysisAsync(Guid petId, Guid? viewerTraderId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<LeaderboardRow>> GetLeaderboardAsync(CancellationToken cancellationToken = default);
@@ -99,7 +104,23 @@ public sealed record MarketListingRow(
     decimal? RecentTradePriceForBreed,
     int RemainingNewSupplyForBreed);
 
-public sealed record TradeResultRow(Guid TradeId, Guid PetId, Guid BuyerTraderId, Guid SellerTraderId, decimal Price);
+public sealed record TradeResultRow(
+    Guid TradeId,
+    Guid PetId,
+    Guid BuyerTraderId,
+    Guid SellerTraderId,
+    decimal Price,
+    DateTimeOffset ExecutedAt);
+
+/// <summary>DTO aligned with SPA <c>TradeRecord</c> for merging with trade-service history.</summary>
+public sealed record PetResaleTradeHistoryRow(
+    Guid TradeId,
+    string Symbol,
+    decimal Price,
+    int Quantity,
+    DateTimeOffset ExecutedAt,
+    string BuyerUserId,
+    string SellerUserId);
 
 public abstract record PlaceBidResult;
 

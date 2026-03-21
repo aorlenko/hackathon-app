@@ -37,7 +37,9 @@ export const SettlementHistoryPage = () => {
     setLoading(true);
 
     void Promise.all([
-      getUserSettlementHistory(auth.userId, auth.accessToken),
+      getUserSettlementHistory(auth.userId, auth.accessToken).catch(
+        () => [] as SettlementRecord[],
+      ),
       getUserTradeHistory(auth.userId, auth.accessToken).catch(
         () => [] as TradeRecord[],
       ),
@@ -61,9 +63,7 @@ export const SettlementHistoryPage = () => {
     <div className="trading-pets-page">
       <header className="trading-pets-page__header">
         <h1>Settlement history</h1>
-        <p className="muted">
-          Monitor terminal settlement outcomes and lifecycle completion context.
-        </p>
+        <p className="muted">Settlement outcomes for your trades.</p>
       </header>
       {loading ? <p className="trading-pets-loading">Loading settlements...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}

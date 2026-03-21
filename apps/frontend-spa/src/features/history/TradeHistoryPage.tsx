@@ -47,7 +47,7 @@ export const TradeHistoryPage = () => {
     <div className="trading-pets-page">
       <header className="trading-pets-page__header">
         <h1>Trade history</h1>
-        <p className="muted">Review recent executions returned by the trade service.</p>
+        <p className="muted">Trades recorded for your account.</p>
       </header>
       {loading ? <p className="trading-pets-loading">Loading trades...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}

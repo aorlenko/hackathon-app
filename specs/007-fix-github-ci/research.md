@@ -86,6 +86,6 @@ The first hard failure is therefore expected on job **`infra-validate`**, step *
 
 | Gap | Resolution |
 |-----|------------|
-| Contract: `frontend` / `backend` run only when path guards match | Added `if: hashFiles(...) != ''` on both jobs so skip behavior matches `data-model.md` / `contracts/ci-workflow.md`. |
+| Contract: `frontend` / `backend` run only when path guards match | **Not implemented at job level**: GitHub Actions does **not** allow `hashFiles()` in `jobs.<id>.if` (parser error: unrecognized function). Those jobs stay **unconditional** while paths exist in this repo; use step-level `if` + `hashFiles` only if skip-on-missing-path is required later. |
 | Contract: infra steps need Compose v2, `pwsh`, and `az bicep` | Added an explicit **Install Azure CLI and PowerShell 7** step before **Validate Bicep templates**; Compose remains **Validate docker compose** via `docker compose`. |
 | FR-002: image matrix failures should name the service | Renamed the matrix step to **Build and push `${{ matrix.name }}` image**. |

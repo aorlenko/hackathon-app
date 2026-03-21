@@ -48,7 +48,6 @@ jobs:
         run: npm run infra:validate
 
   frontend:
-    if: ${{ hashFiles('apps/frontend-spa/package.json') != '' }}
     name: Frontend lint and tests
     runs-on: ubuntu-latest
     defaults:
@@ -78,7 +77,6 @@ jobs:
         run: npm run build --if-present
 
   backend:
-    if: ${{ hashFiles('apps/services/TradingPlatform.sln') != '' }}
     name: Backend restore, build, and tests
     runs-on: ubuntu-latest
     steps:

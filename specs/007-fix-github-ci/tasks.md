@@ -40,7 +40,7 @@
 
 - [x] T003 Reproduce the failing CI job locally using the matching section in `specs/007-fix-github-ci/quickstart.md` (infra: root `package.json` scripts; frontend: `apps/frontend-spa/`; backend: `apps/services/TradingPlatform.sln` from repo root). **Infra + backend** reproduced green on Windows; **frontend** blocked locally by `npm ci` file-lock / mixed `node_modules` (GitHub uses clean checkout — expect parity with workflow).
 - [x] T004 Update `.github/workflows/ci.yml` job `infra-validate` so the runner provides prerequisites from `specs/007-fix-github-ci/research.md` for `npm run compose:config` (Docker Compose v2 via `docker compose`) and `npm run infra:validate` / `scripts/infra/validate-bicep.ps1` (PowerShell 7 `pwsh`, Azure CLI `az` with Bicep).
-- [x] T005 Review and, if needed, correct `needs:` / `if:` interactions between `infra-validate`, `frontend`, `backend`, and `build-images` in `.github/workflows/ci.yml` so PR merge paths do not end in confusing skip/failure states (per `specs/007-fix-github-ci/research.md`).
+- [x] T005 Review and, if needed, correct `needs:` / `if:` interactions between `infra-validate`, `frontend`, `backend`, and `build-images` in `.github/workflows/ci.yml` so PR merge paths do not end in confusing skip/failure states (per `specs/007-fix-github-ci/research.md`). **Note**: Job-level `if: hashFiles(...)` is invalid on GitHub Actions; `frontend`/`backend` remain unconditional (see `research.md` §10).
 
 **Checkpoint**: Infra job commands succeed locally; workflow graph matches intended PR behavior from `specs/007-fix-github-ci/contracts/ci-workflow.md`.
 

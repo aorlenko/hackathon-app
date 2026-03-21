@@ -153,6 +153,9 @@ export const MarketDetailPage = () => {
               identities={participantIdentities}
               currentUserId={auth.userId}
               currentUserEmail={auth.accountSnapshot?.email}
+              currentUserDisplayName={
+                auth.accountSnapshot?.displayName ?? auth.displayName
+              }
             />
             <SettlementStatusPanel settlements={realtime.settlements} />
           </div>

@@ -50,10 +50,12 @@ public sealed class TradingPlatformHarness
 
     public TradingPlatformHarness()
     {
-        MarketStore = new MarketDbContext(new DbContextOptionsBuilder<MarketDbContext>()
-            .UseInMemoryDatabase($"market-{Guid.NewGuid():N}")
-            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
-            .Options);
+        MarketStore = new MarketDbContext(
+            new DbContextOptionsBuilder<MarketDbContext>()
+                .UseInMemoryDatabase($"market-{Guid.NewGuid():N}")
+                .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+                .Options,
+            Options.Create(TradingPetsOptions.CreateForContractTestHarness()));
         TradeStore = new TradeDbContext(new DbContextOptionsBuilder<TradeDbContext>()
             .UseInMemoryDatabase($"trade-{Guid.NewGuid():N}")
             .Options);

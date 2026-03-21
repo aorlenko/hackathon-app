@@ -1,16 +1,15 @@
-/** Auth0 / OIDC-style subject ids are not meaningful as a "name" in the UI. */
-const looksLikeOpaqueSubject = (name: string) => name.includes("|");
-
 function sellerListingLabel(sellerDisplayName: string, sellerEmail: string | null | undefined): string {
   const name = sellerDisplayName.trim();
+  if (name.length > 0) {
+    return name;
+  }
   const email = (sellerEmail ?? "").trim();
-  const humanName = name && !looksLikeOpaqueSubject(name) ? name : "";
-  return humanName || email || name || "Seller";
+  return email.length > 0 ? email : "Seller";
 }
 
 /**
  * When the viewer is the seller, omit seller text — ownership is obvious from actions.
- * Otherwise return a short "Seller: …" clause: real display name when usable, else email, else raw name.
+ * Otherwise return a short "Seller: …" clause: display name, or email when the name is blank.
  */
 export function listingSellerClause(
   sellerTraderId: string,

@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { getLeaderboard, type LeaderboardRowDto } from "./tradingPetsApi";
 import { useMyPetTrader } from "./MyPetTraderContext";
-import { useTradingPetsRealtime } from "./useTradingPetsRealtime";
 
 export const LeaderboardPage = () => {
   const auth = useTradingAuth();
-  const { traderId } = useMyPetTrader();
+  const { hubInvalidateSeq } = useMyPetTrader();
   const [rows, setRows] = useState<LeaderboardRowDto[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,11 +22,13 @@ export const LeaderboardPage = () => {
     void load();
   }, [load]);
 
-  useTradingPetsRealtime({
-    traderId,
-    accessToken: auth.accessToken,
-    onRefreshSnapshot: load,
-  });
+  useEffect(() => {
+    if (skipNextHubInvalidateEffect.current) {
+      skipNextHubInvalidateEffect.current = false;
+      return;
+    }
+    void load();
+  }, [hubInvalidateSeq, load]);
 
   return (
     <div className="trading-pets-page">

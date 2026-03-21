@@ -48,9 +48,15 @@ select {
 
 .app-header__top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1.5rem;
+  padding: 0;
+}
+
+.app-header__top .app-header__brand {
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .app-header__brand {
@@ -69,11 +75,17 @@ select {
   letter-spacing: -0.02em;
 }
 
+.app-header__brand > p {
+  max-width: min(72ch, 100%);
+  line-height: 1.45;
+}
+
 .nav-links {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
+  padding: 0;
 }
 
 .nav-links a.active {
@@ -91,12 +103,50 @@ select {
 
 .auth-panel__summary {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.7rem 0.9rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0.5rem 0.85rem;
+  padding: 0.55rem 0.85rem;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.32);
+  max-width: min(100%, 36rem);
+}
+
+.auth-panel__pet-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 0.35rem 0.75rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.22);
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-panel__pet-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.06rem;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 0;
+}
+
+.auth-panel__pet-label {
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #7dd3fc;
+  white-space: nowrap;
+}
+
+.auth-panel__pet-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .auth-panel__identity {
@@ -126,8 +176,8 @@ select {
 .funds-panel {
   display: grid;
   gap: 0.2rem;
-  min-width: 200px;
-  padding-left: 1rem;
+  min-width: min(200px, 100%);
+  padding-left: 0.85rem;
   border-left: 1px solid rgba(148, 163, 184, 0.16);
 }
 
@@ -181,6 +231,10 @@ select {
 
 .app-content {
   padding: 1.5rem 2rem 2rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .stack {
@@ -349,13 +403,22 @@ select {
     text-align: left;
   }
 
-  .funds-panel {
-    min-width: 0;
+  .auth-panel__summary {
+    max-width: 100%;
+  }
+
+  .auth-panel__pet-metrics {
     width: 100%;
+    grid-template-columns: repeat(3, 1fr);
     padding-left: 0;
     border-left: 0;
-    padding-top: 0.35rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.16);
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .auth-panel__pet-metric {
+    align-items: flex-start;
+    text-align: left;
   }
 
   .funds-panel__topline,
@@ -379,8 +442,10 @@ select {
   flex-direction: column;
   gap: 1.25rem;
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 0.25rem;
+  box-sizing: border-box;
 }
 
 .trading-pets-page--centered {
@@ -407,10 +472,47 @@ select {
   font-size: 1.15rem;
 }
 
+.trading-pets-workspace__banner {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: var(--tp-ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.trading-pets-inline-action {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--tp-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.trading-pets-workspace-region {
+  min-width: 0;
+}
+
 .trading-pets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.25rem;
+  align-items: start;
+}
+
+.trading-pets-grid--workspace-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .trading-pets-grid--workspace-pair {
+    grid-template-columns: 1fr;
+  }
 }
 
 .trading-pets-card {
@@ -595,12 +697,274 @@ select {
   margin: 0;
 }
 
+.trading-pets-error--soft {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.trading-pets-panel-loading {
+  margin: 0;
+}
+
+.trading-pets-primary__layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trading-pets-primary__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--tp-border);
+  background: #f8fafc;
+}
+
+.trading-pets-primary__facts dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tp-muted);
+}
+
+.trading-pets-primary__facts dd {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+}
+
+.trading-pets-primary__price {
+  color: var(--tp-accent);
+}
+
+.trading-pets-primary__buy {
+  min-height: 44px;
+  margin-top: 0.25rem;
+}
+
+.trading-pets-listing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--tp-border);
+  background: #f8fafc;
+}
+
+.trading-pets-listing-card--selected {
+  border-color: rgba(13, 148, 136, 0.45);
+  background: var(--tp-accent-dim);
+  box-shadow: 0 0 0 1px rgba(13, 148, 136, 0.2);
+}
+
+.trading-pets-listing-card__title {
+  font-size: 1rem;
+}
+
+.trading-pets-listing-card__ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.trading-pets-listing-card__ask-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--tp-muted);
+}
+
+.trading-pets-listing-card__ask-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--tp-accent);
+}
+
+.trading-pets-listing-card__select {
+  min-height: 40px;
+}
+
+.trading-pets-listings {
+  gap: 0.75rem;
+}
+
+.trading-pets-owned-list {
+  gap: 0;
+}
+
+.trading-pets-owned-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.trading-pets-owned-row:last-child {
+  border-bottom: none;
+}
+
+.trading-pets-owned-row__main {
+  flex: 1;
+  min-width: min(100%, 12rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.trading-pets-owned-row__actions {
+  flex-shrink: 0;
+}
+
+.trading-pets-owned-row__cta {
+  min-height: 40px;
+}
+
+.trading-pets-notifications__item {
+  padding: 0.55rem 0.65rem 0.55rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--tp-border);
+  background: var(--tp-surface);
+  border-left-width: 4px;
+}
+
+.trading-pets-notifications__item--bid {
+  border-left-color: #2563eb;
+}
+
+.trading-pets-notifications__item--trade {
+  border-left-color: #059669;
+}
+
+.trading-pets-notifications__item--listing {
+  border-left-color: #d97706;
+}
+
+.trading-pets-notifications__item--default {
+  border-left-color: var(--tp-muted);
+}
+
+.trading-pets-activity__empty {
+  margin-bottom: 0.5rem;
+}
+
+.trading-pets-seller-actions .secondary-button {
+  min-height: 40px;
+}
+
 .trading-pets-page__header {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   align-items: flex-start;
   width: 100%;
+}
+
+.trading-pets-page__intro--full {
+  max-width: none;
+  width: 100%;
+  line-height: 1.5;
+}
+
+.trading-pets-text-link {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.trading-pets-text-link:hover {
+  color: #1d4ed8;
+}
+
+.trading-pets-owned-row__analysis {
+  margin-top: 0.35rem;
+}
+
+.trading-pets-owned-row--readonly {
+  padding-bottom: 0.65rem;
+}
+
+.trading-pets-toast-stack {
+  position: fixed;
+  top: 5.75rem;
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(calc(100vw - 2rem), 22rem);
+  pointer-events: none;
+}
+
+.trading-pets-toast {
+  pointer-events: auto;
+  position: relative;
+  padding: 0.6rem 2.1rem 0.6rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--tp-border);
+  background: var(--tp-surface);
+  box-shadow: 0 10px 36px rgba(15, 23, 42, 0.18);
+}
+
+.trading-pets-toast--bid {
+  border-left: 4px solid #2563eb;
+}
+
+.trading-pets-toast--trade {
+  border-left: 4px solid #059669;
+}
+
+.trading-pets-toast--listing {
+  border-left: 4px solid #d97706;
+}
+
+.trading-pets-toast--default {
+  border-left: 4px solid var(--tp-muted);
+}
+
+.trading-pets-toast__close {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tp-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trading-pets-toast__close:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--tp-ink);
+}
+
+.trading-pets-toast__title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--tp-ink);
+  padding-right: 0.25rem;
+}
+
+.trading-pets-toast__body {
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--tp-muted);
+  line-height: 1.35;
 }
 
 .trading-pets-page__header h1 {
@@ -612,7 +976,12 @@ select {
   letter-spacing: -0.02em;
 }
 
-.trading-pets-page__header > p.muted,
+.trading-pets-page__header > p.muted {
+  margin: 0;
+  max-width: none;
+  width: 100%;
+}
+
 .trading-pets-page__header-top .muted {
   margin: 0;
   max-width: 52ch;

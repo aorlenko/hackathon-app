@@ -30,12 +30,28 @@ const toEmailSuffix = (userId: string) => {
 const toFallbackEmail = (userId: string) =>
   `trader-${toEmailSuffix(userId)}@demo.local`;
 
+const labelFromIdentity = (identity: AccountIdentity | undefined): string | null => {
+  if (!identity) {
+    return null;
+  }
+  const displayName = identity.displayName?.trim();
+  if (displayName) {
+    return displayName;
+  }
+  const email = identity.email?.trim();
+  if (email) {
+    return email;
+  }
+  return null;
+};
+
 export const formatParticipantLabel = (
   userId: string | null | undefined,
   identities: Map<string, AccountIdentity>,
   options?: {
     currentUserId?: string | null;
     currentUserEmail?: string | null;
+    currentUserDisplayName?: string | null;
     fallbackLabel?: string;
   },
 ) => {
@@ -44,17 +60,26 @@ export const formatParticipantLabel = (
     return options?.fallbackLabel ?? "Unknown participant";
   }
 
-  if (
-    options?.currentUserId &&
-    options?.currentUserEmail &&
-    normalizedUserId === options.currentUserId
-  ) {
-    return options.currentUserEmail;
+  const identity = identities.get(normalizedUserId);
+
+  if (options?.currentUserId && normalizedUserId === options.currentUserId) {
+    const fromIdentity = labelFromIdentity(identity);
+    if (fromIdentity) {
+      return fromIdentity;
+    }
+    const selfName = options.currentUserDisplayName?.trim();
+    if (selfName) {
+      return selfName;
+    }
+    const selfEmail = options.currentUserEmail?.trim();
+    if (selfEmail) {
+      return selfEmail;
+    }
   }
 
-  const identity = identities.get(normalizedUserId);
-  if (identity?.email) {
-    return identity.email;
+  const resolved = labelFromIdentity(identity);
+  if (resolved) {
+    return resolved;
   }
 
   return toFallbackEmail(normalizedUserId);

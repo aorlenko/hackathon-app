@@ -31,7 +31,7 @@ public static class TradersSnapshotEndpoints
             ?? httpContext.User.FindFirst("email")?.Value
             ?? sub;
 
-        var email = httpContext.User.FindFirst("email")?.Value;
+        var email = CurrentUserProfileReader.TryGetEmailClaim(httpContext.User);
 
         var traderId = await store.EnsureLinkedTraderForUserAsync(sub, displayName, email, cancellationToken)
             .ConfigureAwait(false);

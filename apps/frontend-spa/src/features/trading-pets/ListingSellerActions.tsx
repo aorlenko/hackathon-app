@@ -44,7 +44,7 @@ export const ListingSellerActions = ({
           void run(() => acceptBid(listingId, { traderId: sellerTraderId }, accessToken))
         }
       >
-        Accept below-ask bid
+        Accept a below-ask bid
       </button>
       <button
         type="button"
@@ -54,7 +54,7 @@ export const ListingSellerActions = ({
           void run(() => rejectBid(listingId, { traderId: sellerTraderId }, accessToken))
         }
       >
-        Reject bid
+        Reject current bid
       </button>
       <button
         type="button"
@@ -66,9 +66,9 @@ export const ListingSellerActions = ({
           )
         }
       >
-        Withdraw listing
+        Remove from marketplace
       </button>
-      {error ? <p className="trading-pets-error">{error}</p> : null}
+      {error ? <p className="trading-pets-error trading-pets-error--soft">{error}</p> : null}
     </div>
   );
 };

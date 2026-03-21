@@ -1,6 +1,6 @@
 # Quickstart: Demo deployment (hackathon)
 
-Audience: **platform operators** with admin access to the GitHub repo and to an Azure subscription. Complete prerequisites once per org/repo; then trigger deploys as needed.
+Audience: **platform operators** with admin access to the GitHub repo and to an Azure subscription. **Deploy** to Azure uses §§1–2 and **§6** (`deploy-hackathon`). **Optional:** automatic **Docker build/push on every push to `main`/`master`** is **§3** (`ci.yml`) — separate repo-level variables and OIDC rules; it was easy to miss because it does not use the `hackathon` environment.
 
 ---
 
@@ -59,7 +59,23 @@ After Azure setup, configure the repository.
 
 ---
 
-## 3. Demo SKU baseline and exceptions (cost posture)
+## 3. CI: Build and push container images (`ci.yml`)
+
+**This is not covered by the `hackathon` environment alone.** The workflow **`.github/workflows/ci.yml`** runs on **push** to `main` / `master` (and on PRs for other jobs). The job **Build and push container images** is **omitted unless repository-level** settings are satisfied — otherwise it appears **Skipped** in the Actions UI.
+
+| What | Where | Notes |
+|------|--------|--------|
+| **`ACR_NAME`** | Repo **Settings** → **Secrets and variables** → **Actions** → **Variables** | Azure Container Registry **resource name** (short name, not the `*.azurecr.io` host). |
+| **`ACR_LOGIN_SERVER`** | Same **Variables** page | Login server, e.g. **`myregistry.azurecr.io`**. If either variable is empty, the **whole image job is skipped** (see `if: vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != ''` in `ci.yml`). |
+| **`AZURE_CLIENT_ID`**, **`AZURE_TENANT_ID`**, **`AZURE_SUBSCRIPTION_ID`** | Same page → **Secrets** at **repository** scope | Used by **`azure/login`** inside the image job. Secrets stored **only** on GitHub Environment **`hackathon`** are **not** available here — duplicate them as **repository** secrets if you use the same app registration, or use a dedicated CI identity. |
+| **Federated credential (OIDC)** | Entra ID → app registration | In addition to `repo:ORG/REPO:environment:hackathon` (for **deploy-hackathon**), add a credential whose **subject** allows pushes on your default branch, e.g. **`repo:ORG/REPO:ref:refs/heads/main`** or **`.../refs/heads/master`**, so **`ci.yml`** can obtain a token without `environment: hackathon`. |
+| **RBAC** | Azure | Grant that service principal **AcrPush** (or equivalent) on the target registry. |
+
+Without the two **ACR_** variables, you can still run **deploy-hackathon** (it defaults to public/hello-world images unless you override), but **CI will not build or push** your app images automatically.
+
+---
+
+## 4. Demo SKU baseline and exceptions (cost posture)
 
 Defaults in **`infra/bicep/main.bicep`** and **`infra/bicep/modules/monitoring.bicep`** aim for **lowest suitable tier** for a working demo (spec **FR-006**). Anything that is not the absolute cheapest option is listed here as an **exception with rationale**.
 
@@ -74,20 +90,21 @@ Defaults in **`infra/bicep/main.bicep`** and **`infra/bicep/modules/monitoring.b
 | Log Analytics | **PerGB2018**, **30-day** retention | Short retention to limit retention cost; ingestion still billed per GB. |
 | Application Insights | Workspace-based **web** component | Uses Log Analytics backend; aligns with `monitoring.bicep`. |
 
-For a full machine-readable inventory of workflow inputs, secrets, variables, and smoke env vars, see **`contracts/deployment-pipeline-contract.md`**.
+For deploy workflow inventories, see **`contracts/deployment-pipeline-contract.md`** (includes **§ H** for `ci.yml`).
 
 ---
 
-## 4. Verify before first deploy
+## 5. Verify before first deploy
 
 - [ ] Federated credential **subject** matches how GitHub issues OIDC tokens for this repo and environment `hackathon`.  
 - [ ] All **four** environment secrets and **four** variables in section 2 exist on environment `hackathon`.  
+- [ ] If you want **CI** to build/push Docker images on push to `main`/`master`: section **3** (repo variables **`ACR_NAME`**, **`ACR_LOGIN_SERVER`**, repository OIDC secrets, branch federated credential, **AcrPush**).  
 - [ ] Service principal has **RBAC** on the subscription or target resource group.  
 - [ ] `infra/environments/hackathon/parameters.dev.json` reviewed (non-secret defaults; no `sqlAdminPassword` in file).
 
 ---
 
-## 5. Run deployment
+## 6. Run deployment
 
 1. GitHub → **Actions** → workflow **deploy-hackathon** → **Run workflow**.  
 2. Set inputs: `environmentName`, `location`, `resourceGroupName`, optional container image overrides, `runSmoke` (default on).  
@@ -95,7 +112,7 @@ For a full machine-readable inventory of workflow inputs, secrets, variables, an
 
 ---
 
-## 6. Expected duration (reference run)
+## 7. Expected duration (reference run)
 
 Per spec **PRF-001** / **PRF-002**:
 
@@ -113,7 +130,7 @@ Per spec **PRF-001** / **PRF-002**:
 
 ---
 
-## 7. Verify outcome
+## 8. Verify outcome
 
 - Workflow completes green.  
 - Smoke step logs **Basic smoke checks passed.**  
@@ -121,7 +138,7 @@ Per spec **PRF-001** / **PRF-002**:
 
 ---
 
-## 8. SC-003 rehearsal — three consecutive successful deploys
+## 9. SC-003 rehearsal — three consecutive successful deploys
 
 Use this as evidence for spec **SC-003**. Replace placeholders after each green run.
 
@@ -133,7 +150,7 @@ Use this as evidence for spec **SC-003**. Replace placeholders after each green 
 
 ---
 
-## 9. Common failures and log patterns (SC-005)
+## 10. Common failures and log patterns (SC-005)
 
 Map Azure CLI / Actions output to a **category** so operators know what to fix first.
 
@@ -145,6 +162,7 @@ Map Azure CLI / Actions output to a **category** so operators know what to fix f
 | **Quota** | `QuotaExceeded`, `Operation could not be completed`, capacity / SKU unavailable in region | Subscription quotas, try another region, request increase |
 | **Parameter** | `[parameter]` in script output, Bicep compile errors, JSON parse errors for `parameters.dev.json` | Parameter file syntax, path to `main.bicep`, CLI `--parameters` names |
 | **ARM policy** | `RequestDisallowedByPolicy`, policy definition names in error text | Azure Policy exemptions or template alignment with policy |
+| **CI / images** | **Build and push container images** job **Skipped** or notice “Azure OIDC secrets … not all set” | Section **3**: repository **Variables** `ACR_NAME`, `ACR_LOGIN_SERVER`; **repository** secrets for OIDC; federated credential for **branch** (not only `environment:hackathon`); **AcrPush** on ACR |
 
 Legacy quick mapping table:
 
@@ -158,7 +176,7 @@ Legacy quick mapping table:
 
 ---
 
-## 10. Local parity (optional)
+## 11. Local parity (optional)
 
 From repo root with Azure CLI logged in and the same env vars set as in GitHub Actions:
 

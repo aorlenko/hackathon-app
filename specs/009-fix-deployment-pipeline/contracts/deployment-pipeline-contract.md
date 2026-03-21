@@ -1,6 +1,6 @@
 # Contract: Demo deployment pipeline
 
-This document is the **authoritative inventory** of external interfaces for the hackathon/demo deployment path. Implementation MUST keep workflow, scripts, and this file in sync (spec SC-002).
+This document is the **authoritative inventory** of external interfaces for the hackathon/demo **deploy** path (**§ A–G**) and the **CI** image-build path (**§ H–I**). Implementation MUST keep workflows, scripts, and this file in sync (spec SC-002).
 
 ---
 
@@ -113,3 +113,41 @@ Any addition of `secrets.*` or `vars.*` in `deploy-hackathon.yml` or new require
 1. Update this contract.  
 2. Update `quickstart.md` checklist.  
 3. Cross-check tasks in implementation (spec FR-003, SC-002).
+
+---
+
+## H. CI workflow `ci.yml` — build and push images (repository scope)
+
+Source: `.github/workflows/ci.yml`, job **`build-images`**.
+
+This job does **not** use GitHub Environment `hackathon`. Values are read from **repository** secrets/variables only.
+
+### When the job runs
+
+- **Trigger**: `push` to `main` or `master` (not `pull_request`), after `infra-validate`, `frontend`, and `backend` succeed.  
+- **Job-level condition**: `vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != ''`. If either is empty, the job is **skipped**.
+
+### Repository variables
+
+| Name | Purpose |
+|------|---------|
+| `ACR_NAME` | Azure Container Registry resource name (short name) for `az acr login --name` |
+| `ACR_LOGIN_SERVER` | Registry login server host (e.g. `myregistry.azurecr.io`) for image tags |
+
+### Repository secrets (OIDC)
+
+| Name | Purpose |
+|------|---------|
+| `AZURE_CLIENT_ID` | Same pattern as deploy; must exist at **repo** scope for this workflow |
+| `AZURE_TENANT_ID` | Same |
+| `AZURE_SUBSCRIPTION_ID` | Same |
+
+**Federated credential:** A subject scoped to **`environment:hackathon`** does **not** apply to this job. Add a separate federated credential for branch-based OIDC (e.g. `repo:ORG/REPO:ref:refs/heads/main`).
+
+**Azure RBAC:** The service principal needs permission to push to the registry (e.g. **AcrPush** on that ACR).
+
+---
+
+## I. Change control (CI)
+
+Any addition of `secrets.*` or `vars.*` in `ci.yml` for the image job **requires** updating **§ H** and `quickstart.md` section **3**.

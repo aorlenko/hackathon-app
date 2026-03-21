@@ -32,49 +32,57 @@ export const Header = () => {
 
   return (
     <header className="app-header">
-      <div className="app-header__top">
-        <div className="app-header__brand">
-          <h1>Pet Ledger</h1>
-          <p className="muted">
-            Pet marketplace — primary supply, pets for sale from other traders, and settlement history.
-          </p>
-        </div>
-        <div className="auth-panel">
-          {auth.authError ? (
-            <p className="trading-pets-error small" role="alert">
-              {auth.authError}
-            </p>
-          ) : null}
-          {auth.isAuthenticated ? (
-            <>
-              <div className="auth-panel__summary">
-                <div className="auth-panel__identity">
-                  <strong className="auth-panel__name">{auth.displayName}</strong>
-                </div>
-                <PetTraderAuthSummaryMetrics />
+      <div className="app-header__inner">
+        <div className="app-header__top">
+          <div className="app-header__brand">
+            <div className="app-header__brand-row">
+              <span className="app-header__mark" aria-hidden="true" />
+              <div className="app-header__titles">
+                <p className="app-header__eyebrow">Trading</p>
+                <h1>Pet Ledger</h1>
               </div>
-              <button
-                className="secondary-button auth-panel__signout"
-                onClick={auth.logout}
-              >
-                Sign out
+            </div>
+            <p className="muted app-header__tagline">
+              Pet marketplace — primary supply, pets for sale from other traders, and settlement history.
+            </p>
+          </div>
+          <div className="auth-panel">
+            {auth.authError ? (
+              <p className="trading-pets-error small" role="alert">
+                {auth.authError}
+              </p>
+            ) : null}
+            {auth.isAuthenticated ? (
+              <>
+                <div className="auth-panel__summary">
+                  <div className="auth-panel__identity">
+                    <strong className="auth-panel__name">{auth.displayName}</strong>
+                  </div>
+                  <PetTraderAuthSummaryMetrics />
+                </div>
+                <button
+                  className="secondary-button auth-panel__signout"
+                  onClick={auth.logout}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <button className="primary-button" onClick={() => void auth.login()}>
+                {auth.mode === "auth0" ? "Sign in" : "Demo sign-in"}
               </button>
-            </>
-          ) : (
-            <button className="primary-button" onClick={() => void auth.login()}>
-              {auth.mode === "auth0" ? "Sign in" : "Demo sign-in"}
-            </button>
-          )}
+            )}
+          </div>
         </div>
+        <nav className="nav-links" aria-label="Primary">
+          <NavLink to="/pets/primary-supply">Primary supply market</NavLink>
+          <NavLink to="/pets/resale">Resale marketplace</NavLink>
+          <NavLink to="/pets/my-pets">My pets</NavLink>
+          <NavLink to="/pets/leaderboard">Leaderboard</NavLink>
+          <NavLink to="/history/trades">Trade history</NavLink>
+          <NavLink to="/history/settlements">Settlement history</NavLink>
+        </nav>
       </div>
-      <nav className="nav-links" aria-label="Primary">
-        <NavLink to="/pets/primary-supply">Primary supply market</NavLink>
-        <NavLink to="/pets/resale">Resale marketplace</NavLink>
-        <NavLink to="/pets/my-pets">My pets</NavLink>
-        <NavLink to="/pets/leaderboard">Leaderboard</NavLink>
-        <NavLink to="/history/trades">Trade history</NavLink>
-        <NavLink to="/history/settlements">Settlement history</NavLink>
-      </nav>
     </header>
   );
 };

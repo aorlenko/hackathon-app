@@ -40,6 +40,24 @@ export const MyPetsPage = () => {
           ) : (
             pets.map((p) => (
               <li key={p.id} className="trading-pets-owned-row trading-pets-owned-row--readonly">
+                <div className="trading-pets-owned-row__media">
+                  {p.breedImageUrl ? (
+                    <img
+                      className="trading-pets-owned-row__thumb"
+                      src={p.breedImageUrl}
+                      alt={`${p.breedName} (breed reference)`}
+                      loading="lazy"
+                      decoding="async"
+                      width={72}
+                      height={72}
+                    />
+                  ) : (
+                    <div
+                      className="trading-pets-owned-row__thumb trading-pets-owned-row__thumb--placeholder"
+                      aria-hidden
+                    />
+                  )}
+                </div>
                 <div className="trading-pets-owned-row__main">
                   <div>
                     <strong>{p.breedName}</strong>

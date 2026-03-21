@@ -15,6 +15,8 @@ export type BreedDto = {
 export type PetSummaryDto = {
   id: string;
   breedName: string;
+  /** Present when the server has a static image URL for this breed name. */
+  breedImageUrl?: string | null;
   ageYears: number;
   health: number;
   currentDesirability: number;

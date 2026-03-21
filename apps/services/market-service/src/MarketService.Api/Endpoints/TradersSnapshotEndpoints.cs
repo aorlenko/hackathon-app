@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using MarketService.Application.Abstractions;
 using MarketService.Application.Authorization;
+using MarketService.Application.Pets;
 
 namespace MarketService.Api.Endpoints;
 
@@ -73,6 +74,7 @@ public static class TradersSnapshotEndpoints
         {
             id = p.Id,
             breedName = p.BreedName,
+            breedImageUrl = PetBreedImageUrls.TryGetByBreedName(p.BreedName),
             ageYears = p.AgeYears,
             health = p.Health,
             currentDesirability = p.CurrentDesirability,

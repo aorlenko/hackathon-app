@@ -954,6 +954,27 @@ select {
   border-bottom: 1px solid var(--tp-border);
 }
 
+.trading-pets-owned-row__media {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.trading-pets-owned-row__thumb {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid var(--tp-border);
+  background: var(--tp-surface);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.trading-pets-owned-row__thumb--placeholder {
+  background: linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 48%, #94a3b8 100%);
+  opacity: 0.85;
+}
+
 .trading-pets-owned-row:last-child {
   border-bottom: none;
 }

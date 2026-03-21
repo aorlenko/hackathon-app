@@ -54,5 +54,33 @@ describe("MyPetsPage", () => {
     expect(within(region).getByText(/Test Breed/)).toBeInTheDocument();
     expect(within(region).getByText(/Pet ID 00000099/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /offer for resale/i })).not.toBeInTheDocument();
+    expect(within(region).queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("shows breed thumbnail when breedImageUrl is provided", () => {
+    mockUseMyPetTrader.mockReturnValue({
+      traderId: snapshot.traderId,
+      snapshot: {
+        ...snapshot,
+        pets: [
+          {
+            ...snapshot.pets[0],
+            breedName: "Beagle",
+            breedImageUrl: "https://example.com/beagle.jpg",
+          },
+        ],
+      },
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+      hubInvalidateSeq: 0,
+    });
+    render(
+      <MemoryRouter>
+        <MyPetsPage />
+      </MemoryRouter>,
+    );
+    const img = screen.getByRole("img", { name: /beagle \(breed reference\)/i });
+    expect(img).toHaveAttribute("src", "https://example.com/beagle.jpg");
   });
 });

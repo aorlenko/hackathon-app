@@ -48,6 +48,7 @@ public static class PetsPurchaseEndpoints
         {
             id = p.Id,
             breedName = p.BreedName,
+            breedImageUrl = PetBreedImageUrls.TryGetByBreedName(p.BreedName),
             ageYears = p.AgeYears,
             health = p.Health,
             currentDesirability = p.CurrentDesirability,

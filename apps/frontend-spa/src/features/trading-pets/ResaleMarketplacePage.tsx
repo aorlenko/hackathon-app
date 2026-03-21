@@ -42,6 +42,13 @@ export const ResaleMarketplacePage = () => {
     return findActiveMyBidForListing(snapshot?.myBids, selectedListing.listingId)?.amount ?? null;
   }, [selectedListing, snapshot?.myBids]);
 
+  /** Listing selected for bidding in Others&apos; offers (not your own). */
+  const othersBidSelection = useMemo(
+    () =>
+      selectedListing && selectedListing.sellerTraderId !== traderId ? selectedListing : null,
+    [selectedListing, traderId],
+  );
+
   const load = useCallback(
     async (options?: { silent?: boolean }) => {
       const silent = options?.silent === true;
@@ -233,32 +240,36 @@ export const ResaleMarketplacePage = () => {
                 );
               })}
             </ul>
+            {othersBidSelection ? (
+              <div
+                key={othersBidSelection.listingId}
+                className="trading-pets-resale-inline-bid"
+                role="region"
+                aria-labelledby="resale-inline-bid-heading"
+              >
+                <ResalePlaceBidPanel
+                  embedded
+                  traderId={traderId}
+                  accessToken={auth.accessToken}
+                  selectedListing={othersBidSelection}
+                  selectedListingPendingBidAmount={selectedListingPendingBidAmount}
+                  onClearBidSelection={() => {
+                    setActionError(null);
+                    setBidListingId("");
+                  }}
+                  bidAmount={bidAmount}
+                  onBidAmountChange={setBidAmount}
+                  onBidComplete={afterListingMutation}
+                  onBidError={setActionError}
+                />
+                {actionError ? (
+                  <p className="trading-pets-error trading-pets-error--soft">{actionError}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </section>
       </div>
-
-      <section className="trading-pets-card trading-pets-resale__bid" aria-labelledby="resale-bid-title">
-        <h2 id="resale-bid-title" className="visually-hidden">
-          Place bid
-        </h2>
-        <div className="trading-pets-card__body">
-          <ResalePlaceBidPanel
-            traderId={traderId}
-            accessToken={auth.accessToken}
-            selectedListing={selectedListing}
-            selectedListingPendingBidAmount={selectedListingPendingBidAmount}
-            onClearBidSelection={() => {
-              setActionError(null);
-              setBidListingId("");
-            }}
-            bidAmount={bidAmount}
-            onBidAmountChange={setBidAmount}
-            onBidComplete={afterListingMutation}
-            onBidError={setActionError}
-          />
-          {actionError ? <p className="trading-pets-error trading-pets-error--soft">{actionError}</p> : null}
-        </div>
-      </section>
     </div>
   );
 };

@@ -542,9 +542,43 @@ select {
   }
 }
 
-.trading-pets-resale__offer .trading-pets-card__body,
-.trading-pets-resale__bid .trading-pets-card__body {
+.trading-pets-resale__offer .trading-pets-card__body {
   padding-top: 0;
+}
+
+.trading-pets-resale-inline-bid {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tp-border);
+  animation: trading-pets-resale-inline-bid-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes trading-pets-resale-inline-bid-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trading-pets-resale-inline-bid {
+    animation: none;
+  }
+}
+
+.trading-pets-form--embedded-bid {
+  gap: 0.55rem;
+}
+
+.trading-pets-subheading--embedded-bid {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
 }
 
 .trading-pets-empty--column {

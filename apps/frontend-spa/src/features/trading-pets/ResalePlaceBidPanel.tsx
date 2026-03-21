@@ -12,6 +12,11 @@ type Props = {
   onBidAmountChange: (n: number) => void;
   onBidComplete: () => void | Promise<void>;
   onBidError: (message: string | null) => void;
+  /**
+   * Inline under Others&apos; offers: no empty-state copy; render nothing until a listing is selected.
+   * @default false
+   */
+  embedded?: boolean;
 };
 
 export const ResalePlaceBidPanel = ({
@@ -24,6 +29,7 @@ export const ResalePlaceBidPanel = ({
   onBidAmountChange,
   onBidComplete,
   onBidError,
+  embedded = false,
 }: Props) => {
   const bid = async () => {
     onBidError(null);
@@ -58,9 +64,23 @@ export const ResalePlaceBidPanel = ({
   const othersListing =
     selectedListing && selectedListing.sellerTraderId !== traderId ? selectedListing : null;
 
+  if (embedded && !othersListing) {
+    return null;
+  }
+
+  const formClass =
+    embedded ? "trading-pets-form trading-pets-form--embedded-bid" : "trading-pets-form";
+
   return (
-    <div className="trading-pets-form">
-      <h3 className="trading-pets-subheading">Place bid</h3>
+    <div className={formClass}>
+      <h3
+        id={embedded ? "resale-inline-bid-heading" : undefined}
+        className={
+          embedded ? "trading-pets-subheading trading-pets-subheading--embedded-bid" : "trading-pets-subheading"
+        }
+      >
+        Place bid
+      </h3>
       {othersListing ? (
         <>
           <div className="trading-pets-bid-target" aria-live="polite">

@@ -125,7 +125,8 @@ This job does **not** use GitHub Environment `hackathon`. Values are read from *
 ### When the job runs
 
 - **Trigger**: `push` to `main` or `master` (not `pull_request`), after `infra-validate`, `frontend`, and `backend` succeed.  
-- **Job-level condition**: `vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != ''`. If either is empty, the job is **skipped**.
+- **Job-level condition**: `vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != ''`. If either is empty, the job is **skipped**.  
+- **Docker build context**: **Repository root** (`.`). Service Dockerfiles use paths such as `apps/frontend-spa/...` and `apps/services/<svc>/src/...`; a per-service context breaks `COPY` and yields “file not found” / MSB1009 in CI.
 
 ### Repository variables
 
@@ -142,7 +143,7 @@ This job does **not** use GitHub Environment `hackathon`. Values are read from *
 | `AZURE_TENANT_ID` | Same |
 | `AZURE_SUBSCRIPTION_ID` | Same |
 
-**Federated credential:** A subject scoped to **`environment:hackathon`** does **not** apply to this job. Add a separate federated credential for branch-based OIDC (e.g. `repo:ORG/REPO:ref:refs/heads/main`).
+**Federated credential:** A subject scoped to **`environment:hackathon`** does **not** apply to this job. Add a **separate** federated credential (**Entity type: Branch**, name `main` or `master` to match the repo default branch) so the assertion subject is e.g. `repo:ORG/REPO:ref:refs/heads/master`. Without it, `azure/login` fails with **`AADSTS700213`** (no matching federated identity record).
 
 **Azure RBAC:** The service principal needs permission to push to the registry (e.g. **AcrPush** on that ACR).
 

@@ -109,22 +109,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Context must be repo root: Dockerfiles use paths like apps/frontend-spa/... and apps/services/.../src/...
         include:
           - name: frontend-spa
             dockerfile: apps/frontend-spa/Dockerfile
-            context: apps/frontend-spa
+            context: .
             repository: frontend-spa
           - name: market-service
             dockerfile: apps/services/market-service/Dockerfile
-            context: apps/services/market-service
+            context: .
             repository: market-service
           - name: trade-service
             dockerfile: apps/services/trade-service/Dockerfile
-            context: apps/services/trade-service
+            context: .
             repository: trade-service
           - name: settlement-service
             dockerfile: apps/services/settlement-service/Dockerfile
-            context: apps/services/settlement-service
+            context: .
             repository: settlement-service
     steps:
       - name: Check Azure OIDC secrets

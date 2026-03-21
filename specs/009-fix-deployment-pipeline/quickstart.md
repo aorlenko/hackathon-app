@@ -68,8 +68,12 @@ After Azure setup, configure the repository.
 | **`ACR_NAME`** | Repo **Settings** → **Secrets and variables** → **Actions** → **Variables** | Azure Container Registry **resource name** (short name, not the `*.azurecr.io` host). |
 | **`ACR_LOGIN_SERVER`** | Same **Variables** page | Login server, e.g. **`myregistry.azurecr.io`**. If either variable is empty, the **whole image job is skipped** (see `if: vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != ''` in `ci.yml`). |
 | **`AZURE_CLIENT_ID`**, **`AZURE_TENANT_ID`**, **`AZURE_SUBSCRIPTION_ID`** | Same page → **Secrets** at **repository** scope | Used by **`azure/login`** inside the image job. Secrets stored **only** on GitHub Environment **`hackathon`** are **not** available here — duplicate them as **repository** secrets if you use the same app registration, or use a dedicated CI identity. |
-| **Federated credential (OIDC)** | Entra ID → app registration | In addition to `repo:ORG/REPO:environment:hackathon` (for **deploy-hackathon**), add a credential whose **subject** allows pushes on your default branch, e.g. **`repo:ORG/REPO:ref:refs/heads/main`** or **`.../refs/heads/master`**, so **`ci.yml`** can obtain a token without `environment: hackathon`. |
+| **Federated credential (OIDC)** | Entra ID → app registration | In addition to `repo:ORG/REPO:environment:hackathon` (for **deploy-hackathon**), add a **second** credential: **Entity type = Branch**, branch = **`main`** or **`master`** (match your default branch). That produces a subject like **`repo:ORG/REPO:ref:refs/heads/master`**. **`ci.yml` does not use** `environment: hackathon`, so the environment-only credential **never** applies to this workflow. |
 | **RBAC** | Azure | Grant that service principal **AcrPush** (or equivalent) on the target registry. |
+
+**If Azure login fails with `AADSTS700213` and “No matching federated identity record”** for subject `repo:…:ref:refs/heads/…`: the branch federated credential is missing or the branch name in Entra does not match the branch in the error (e.g. `main` vs `master`).
+
+Dockerfiles in this repo assume the **monorepo root** as build context (`COPY apps/...`). **`ci.yml`** passes **`context: .`** so `docker build --file …/Dockerfile .` matches local full-repo builds.
 
 Without the two **ACR_** variables, you can still run **deploy-hackathon** (it defaults to public/hello-world images unless you override), but **CI will not build or push** your app images automatically.
 

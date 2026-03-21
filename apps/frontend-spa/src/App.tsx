@@ -50,9 +50,6 @@ export const Header = () => {
               <div className="auth-panel__summary">
                 <div className="auth-panel__identity">
                   <strong className="auth-panel__name">{auth.displayName}</strong>
-                  <p className="muted small">
-                    {`Authenticated via ${auth.mode === "auth0" ? "Auth0" : "demo mode"}`}
-                  </p>
                 </div>
                 <PetTraderAuthSummaryMetrics />
               </div>

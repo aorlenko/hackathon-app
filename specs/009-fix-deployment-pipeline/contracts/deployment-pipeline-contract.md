@@ -86,6 +86,7 @@ Script `deploy-hackathon.ps1` always passes:
 
 - `@parametersFile`
 - `environmentName=<workflow input>`
+- `location=<workflow input>`
 
 Optional CLI overrides when env vars are set: `sqlAdminLogin`, `sqlAdminPassword`, `auth0Domain`, `auth0Audience`, `auth0ClientId`, and non-empty image overrides.
 

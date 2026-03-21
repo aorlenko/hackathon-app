@@ -14,6 +14,7 @@ Complete these in order before configuring GitHub.
 2. **Resource group (target)**  
    - Either create an empty resource group in the target region, or rely on the workflow: it runs **`az group create`** with your `resourceGroupName` input (default e.g. `rg-trading-hackathon-dev`).  
    - **`az group create` is idempotent**: if the group already exists, the command succeeds and does not delete existing resources.
+   - The deploy script also forwards the workflow **`location`** into the Bicep deployment, so app resources follow the region you choose at workflow run time rather than staying pinned to the parameter file default.
 
 3. **Azure AD app registration (OIDC trust for GitHub)**  
    - In Microsoft Entra ID, create an **app registration** (or reuse an automation service principal).  
@@ -164,7 +165,7 @@ Map Azure CLI / Actions output to a **category** so operators know what to fix f
 | **Secret** | Script messages like `[secret/config] SQL_ADMIN_PASSWORD`, Key Vault / SQL login failures, “password required” | GitHub secrets, `SQL_ADMIN_LOGIN` / `SQL_ADMIN_PASSWORD`, Key Vault access |
 | **RBAC** | `Authorization failed`, `403`, `does not have authorization` on subscription or RG | Role assignments for the OIDC service principal |
 | **Quota** | `QuotaExceeded`, `Operation could not be completed`, capacity / SKU unavailable in region | Subscription quotas, try another region, request increase |
-| **SQL region** | `ProvisioningDisabled`, “Provisioning is restricted in this region” on `Microsoft.Sql/servers` | Run **deploy-hackathon** with workflow input **`location`** set to an allowed region (often **`eastus`**); subscription type may block SQL in some geographies |
+| **SQL region** | `ProvisioningDisabled`, “Provisioning is restricted in this region” on `Microsoft.Sql/servers` | Run **deploy-hackathon** with workflow input **`location`** set to an allowed region. The deploy script forwards that value into Bicep; older failed runs may still exist from before that fix. |
 | **Parameter** | `[parameter]` in script output, Bicep compile errors, JSON parse errors for `parameters.dev.json` | Parameter file syntax, path to `main.bicep`, CLI `--parameters` names |
 | **ARM policy** | `RequestDisallowedByPolicy`, policy definition names in error text | Azure Policy exemptions or template alignment with policy |
 | **CI / images** | **Build and push container images** job **Skipped** or notice “Azure OIDC secrets … not all set” | Section **3**: repository **Variables** `ACR_NAME`, `ACR_LOGIN_SERVER`; **repository** secrets for OIDC; federated credential for **branch** (not only `environment:hackathon`); **AcrPush** on ACR |

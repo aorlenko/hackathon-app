@@ -56,7 +56,8 @@ if ($CreateResourceGroup) {
 $deploymentName = "hackathon-$EnvironmentName-$(Get-Date -Format 'yyyyMMddHHmmss')"
 $parameterArguments = @(
     "@$ParametersFile",
-    "environmentName=$EnvironmentName"
+    "environmentName=$EnvironmentName",
+    "location=$Location"
 )
 
 if ($SqlAdminLogin) {

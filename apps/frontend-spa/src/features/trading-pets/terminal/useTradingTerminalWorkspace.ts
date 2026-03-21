@@ -5,6 +5,14 @@ import {
   type TerminalMarketRowDto,
   type TerminalWorkspaceDto,
 } from "../tradingPetsApi";
+import {
+  buildTerminalMarketHighlights,
+  buildTerminalWorkspaceHighlights,
+  type TerminalMarketHighlight,
+  type TerminalWorkspaceHighlights,
+} from "./terminalHighlights";
+
+const HIGHLIGHT_MS = 2500;
 
 type Args = {
   accessToken?: string;
@@ -14,9 +22,13 @@ type Args = {
 
 export type TradingTerminalWorkspaceState = {
   markets: TerminalMarketRowDto[];
+  marketHighlights: Record<string, TerminalMarketHighlight>;
   selectedMarketEntryId: string | null;
   selectMarket: (marketEntryId: string) => void;
   workspace: TerminalWorkspaceDto | null;
+  newTradeIds: string[];
+  bidLevelHighlights: TerminalWorkspaceHighlights["bidLevels"];
+  askLevelHighlights: TerminalWorkspaceHighlights["askLevels"];
   marketsLoading: boolean;
   workspaceLoading: boolean;
   marketsError: string | null;
@@ -30,18 +42,56 @@ export const useTradingTerminalWorkspace = ({
   invalidateKey,
 }: Args): TradingTerminalWorkspaceState => {
   const [markets, setMarkets] = useState<TerminalMarketRowDto[]>([]);
+  const [marketHighlights, setMarketHighlights] = useState<
+    Record<string, TerminalMarketHighlight>
+  >({});
   const [selectedMarketEntryId, setSelectedMarketEntryId] = useState<
     string | null
   >(null);
   const [workspace, setWorkspace] = useState<TerminalWorkspaceDto | null>(
     null,
   );
+  const [newTradeIds, setNewTradeIds] = useState<string[]>([]);
+  const [bidLevelHighlights, setBidLevelHighlights] = useState<
+    TerminalWorkspaceHighlights["bidLevels"]
+  >({});
+  const [askLevelHighlights, setAskLevelHighlights] = useState<
+    TerminalWorkspaceHighlights["askLevels"]
+  >({});
   const [marketsLoading, setMarketsLoading] = useState(false);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [marketsError, setMarketsError] = useState<string | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const marketsRef = useRef<TerminalMarketRowDto[]>([]);
+  const workspaceRef = useRef<TerminalWorkspaceDto | null>(null);
   const lastWorkspaceMarketIdRef = useRef<string | null>(null);
   const workspaceFetchSeqRef = useRef(0);
+  const marketHighlightTimerRef = useRef<number | undefined>(undefined);
+  const workspaceHighlightTimerRef = useRef<number | undefined>(undefined);
+
+  const clearMarketHighlightsLater = useCallback(() => {
+    if (marketHighlightTimerRef.current) {
+      window.clearTimeout(marketHighlightTimerRef.current);
+    }
+
+    marketHighlightTimerRef.current = window.setTimeout(() => {
+      setMarketHighlights({});
+      marketHighlightTimerRef.current = undefined;
+    }, HIGHLIGHT_MS);
+  }, []);
+
+  const clearWorkspaceHighlightsLater = useCallback(() => {
+    if (workspaceHighlightTimerRef.current) {
+      window.clearTimeout(workspaceHighlightTimerRef.current);
+    }
+
+    workspaceHighlightTimerRef.current = window.setTimeout(() => {
+      setNewTradeIds([]);
+      setBidLevelHighlights({});
+      setAskLevelHighlights({});
+      workspaceHighlightTimerRef.current = undefined;
+    }, HIGHLIGHT_MS);
+  }, []);
 
   const loadMarkets = useCallback(async () => {
     if (!accessToken) {
@@ -51,6 +101,17 @@ export const useTradingTerminalWorkspace = ({
     setMarketsError(null);
     try {
       const rows = await getTerminalMarkets(accessToken);
+      const nextHighlights = buildTerminalMarketHighlights(
+        marketsRef.current,
+        rows,
+      );
+
+      if (Object.keys(nextHighlights).length > 0) {
+        setMarketHighlights(nextHighlights);
+        clearMarketHighlightsLater();
+      }
+
+      marketsRef.current = rows;
       setMarkets(rows);
       setSelectedMarketEntryId((prev) => {
         if (prev && rows.some((r) => r.marketEntryId === prev)) {
@@ -70,8 +131,12 @@ export const useTradingTerminalWorkspace = ({
   const loadWorkspace = useCallback(async () => {
     if (!accessToken || !selectedMarketEntryId) {
       lastWorkspaceMarketIdRef.current = null;
+      workspaceRef.current = null;
       setWorkspace(null);
       setWorkspaceError(null);
+      setNewTradeIds([]);
+      setBidLevelHighlights({});
+      setAskLevelHighlights({});
       return;
     }
     const id = selectedMarketEntryId;
@@ -80,7 +145,11 @@ export const useTradingTerminalWorkspace = ({
     setWorkspaceLoading(true);
     setWorkspaceError(null);
     if (selectionChanged) {
+      workspaceRef.current = null;
       setWorkspace(null);
+      setNewTradeIds([]);
+      setBidLevelHighlights({});
+      setAskLevelHighlights({});
     }
     const seq = ++workspaceFetchSeqRef.current;
     try {
@@ -88,6 +157,23 @@ export const useTradingTerminalWorkspace = ({
       if (seq !== workspaceFetchSeqRef.current) {
         return;
       }
+      const nextHighlights = buildTerminalWorkspaceHighlights(
+        workspaceRef.current,
+        snap,
+      );
+
+      if (
+        nextHighlights.newTradeIds.length > 0 ||
+        Object.keys(nextHighlights.bidLevels).length > 0 ||
+        Object.keys(nextHighlights.askLevels).length > 0
+      ) {
+        setNewTradeIds(nextHighlights.newTradeIds);
+        setBidLevelHighlights(nextHighlights.bidLevels);
+        setAskLevelHighlights(nextHighlights.askLevels);
+        clearWorkspaceHighlightsLater();
+      }
+
+      workspaceRef.current = snap;
       setWorkspace(snap);
       setWorkspaceError(null);
     } catch (e) {
@@ -115,15 +201,32 @@ export const useTradingTerminalWorkspace = ({
     void loadWorkspace();
   }, [loadWorkspace, invalidateKey]);
 
+  useEffect(
+    () => () => {
+      if (marketHighlightTimerRef.current) {
+        window.clearTimeout(marketHighlightTimerRef.current);
+      }
+
+      if (workspaceHighlightTimerRef.current) {
+        window.clearTimeout(workspaceHighlightTimerRef.current);
+      }
+    },
+    [],
+  );
+
   const selectMarket = useCallback((marketEntryId: string) => {
     setSelectedMarketEntryId(marketEntryId);
   }, []);
 
   return {
     markets,
+    marketHighlights,
     selectedMarketEntryId,
     selectMarket,
     workspace,
+    newTradeIds,
+    bidLevelHighlights,
+    askLevelHighlights,
     marketsLoading,
     workspaceLoading,
     marketsError,

@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\apps\services\market-service\src\MarketService\MarketService.csproj" />
     <ProjectReference Include="..\..\..\..\apps\services\market-service\src\MarketService.Application\MarketService.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\services\market-service\src\MarketService.Domain\MarketService.Domain.csproj" />
     <ProjectReference Include="..\..\..\..\apps\services\market-service\src\MarketService.Infrastructure\MarketService.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\..\libs\contracts\http\src\Trading.Contracts.Http\Trading.Contracts.Http.csproj" />
     <ProjectReference Include="..\..\..\..\libs\test-support\src\Trading.TestSupport\Trading.TestSupport.csproj" />

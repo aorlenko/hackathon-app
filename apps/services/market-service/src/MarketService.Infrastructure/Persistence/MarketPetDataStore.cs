@@ -774,33 +774,320 @@ public sealed class MarketPetDataStore : IMarketPetStore
         return true;
     }
 
-    public Task<TerminalOrderResult?> PlaceTerminalBidAsync(
+    public async Task<TerminalOrderResult?> PlaceTerminalBidAsync(
         Guid traderId,
         Guid marketEntryId,
         int quantity,
         decimal limitPrice,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<TerminalOrderResult?>(null);
+        if (quantity <= 0 || limitPrice <= 0)
+        {
+            return null;
+        }
+
+        if (!await _db.Breeds.AnyAsync(b => b.Id == marketEntryId, cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        var requestId = Guid.NewGuid();
+        var tradeIds = new List<Guid>();
+        var affectedTraderIds = new HashSet<Guid> { traderId };
+        var filled = 0;
+        decimal executionSum = 0;
+
+        while (filled < quantity)
+        {
+            var cross = await TryExecuteSingleCrossBuyAsync(traderId, marketEntryId, limitPrice, cancellationToken)
+                .ConfigureAwait(false);
+            if (!cross.Success)
+            {
+                break;
+            }
+
+            filled++;
+            executionSum += cross.Trade!.Price;
+            tradeIds.Add(cross.Trade.TradeId);
+            affectedTraderIds.Add(cross.Trade.BuyerTraderId);
+            affectedTraderIds.Add(cross.Trade.SellerTraderId);
+        }
+
+        var remaining = quantity - filled;
+        var pending = 0;
+        if (remaining > 0)
+        {
+            var skip = new HashSet<Guid>();
+            while (pending < remaining)
+            {
+                var listingId = await FindNextPendingBidListingIdAsync(
+                        traderId,
+                        marketEntryId,
+                        limitPrice,
+                        skip,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (listingId is null)
+                {
+                    break;
+                }
+
+                var placed = await TryExecuteSinglePendingBidAsync(traderId, listingId.Value, limitPrice, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!placed.Success)
+                {
+                    skip.Add(listingId.Value);
+                    continue;
+                }
+
+                pending++;
+                affectedTraderIds.Add(placed.SellerTraderId);
+                foreach (var priorBidderId in placed.ReleasedBidderIds)
+                {
+                    affectedTraderIds.Add(priorBidderId);
+                }
+            }
+        }
+
+        var rejected = quantity - filled - pending;
+        var avg = filled > 0 ? executionSum / filled : (decimal?)null;
+        var message = BuildTerminalBidMessage(filled, pending, rejected);
+        return new TerminalOrderResult(
+            requestId,
+            TerminalOrderAction.PlaceBid,
+            quantity,
+            filled,
+            pending,
+            rejected,
+            avg,
+            message,
+            tradeIds,
+            affectedTraderIds.ToArray());
     }
 
-    public Task<TerminalOrderResult?> PlaceTerminalAskAsync(
+    public async Task<TerminalOrderResult?> PlaceTerminalAskAsync(
         Guid traderId,
         Guid marketEntryId,
         int quantity,
         decimal limitPrice,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<TerminalOrderResult?>(null);
+        if (quantity <= 0 || limitPrice <= 0)
+        {
+            return null;
+        }
+
+        if (!await _db.Breeds.AnyAsync(b => b.Id == marketEntryId, cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        var requestId = Guid.NewGuid();
+
+        var activelyListedPetIds = await _db.Listings
+            .AsNoTracking()
+            .Where(l => l.WithdrawnAt == null)
+            .Select(l => l.PetId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var listedSet = new HashSet<Guid>(activelyListedPetIds);
+
+        var breedPets = await _db.Pets
+            .Where(p => p.OwnerTraderId == traderId && p.BreedId == marketEntryId)
+            .OrderBy(p => p.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var pets = breedPets
+            .Where(p => !listedSet.Contains(p.Id))
+            .Take(quantity)
+            .ToList();
+
+        if (pets.Count < quantity)
+        {
+            return new TerminalOrderResult(
+                requestId,
+                TerminalOrderAction.PlaceAsk,
+                quantity,
+                0,
+                0,
+                quantity,
+                null,
+                "Insufficient eligible pets for the selected market.",
+                [],
+                [traderId]);
+        }
+
+        await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var pet in pets)
+        {
+            var listing = new Listing
+            {
+                Id = Guid.NewGuid(),
+                PetId = pet.Id,
+                SellerTraderId = traderId,
+                AskingPrice = limitPrice,
+                CreatedAt = now,
+                WithdrawnAt = null
+            };
+            _db.Listings.Add(listing);
+        }
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+        return new TerminalOrderResult(
+            requestId,
+            TerminalOrderAction.PlaceAsk,
+            quantity,
+            quantity,
+            0,
+            0,
+            null,
+            $"Listed {quantity} pet(s) at {limitPrice:0.##}.",
+            [],
+            [traderId]);
     }
 
-    public Task<TerminalOrderResult?> BuyNowAsync(
+    public async Task<TerminalOrderResult?> BuyNowAsync(
         Guid traderId,
         Guid marketEntryId,
         int quantity,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<TerminalOrderResult?>(null);
+        if (quantity <= 0)
+        {
+            return null;
+        }
+
+        if (!await _db.Breeds.AnyAsync(b => b.Id == marketEntryId, cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        var requestId = Guid.NewGuid();
+
+        await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var listings = await _db.Listings
+            .Include(l => l.Pet!)
+            .ThenInclude(p => p!.Breed)
+            .Include(l => l.Seller)
+            .Where(l =>
+                l.WithdrawnAt == null &&
+                l.Pet != null &&
+                l.Pet.BreedId == marketEntryId &&
+                l.SellerTraderId != traderId)
+            .OrderBy(l => l.AskingPrice)
+            .ThenBy(l => l.CreatedAt)
+            .Take(quantity)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (listings.Count < quantity)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return new TerminalOrderResult(
+                requestId,
+                TerminalOrderAction.BuyNow,
+                quantity,
+                0,
+                0,
+                quantity,
+                null,
+                "Requested quantity is not available at the best asks for this market.",
+                [],
+                [traderId]);
+        }
+
+        var buyer = await _db.Traders.FirstOrDefaultAsync(t => t.Id == traderId, cancellationToken).ConfigureAwait(false);
+        if (buyer is null)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return null;
+        }
+
+        var totalCost = listings.Sum(l => l.AskingPrice);
+        if (buyer.AvailableCash < totalCost)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return new TerminalOrderResult(
+                requestId,
+                TerminalOrderAction.BuyNow,
+                quantity,
+                0,
+                0,
+                quantity,
+                null,
+                "Insufficient available balance to complete the buy-now request.",
+                [],
+                [traderId]);
+        }
+
+        var tradeIds = new List<Guid>();
+        var affectedTraderIds = new HashSet<Guid> { traderId };
+        decimal executionSum = 0;
+        var superseded = new List<Trader>();
+        foreach (var listing in listings)
+        {
+            if (listing.Pet is null || listing.Seller is null)
+            {
+                await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                return new TerminalOrderResult(
+                    requestId,
+                    TerminalOrderAction.BuyNow,
+                    quantity,
+                    0,
+                    0,
+                    quantity,
+                    null,
+                    "Requested quantity is not available at the best asks for this market.",
+                    [],
+                    [traderId]);
+            }
+
+            var more = await SupersedeActivePendingBidsWithNotificationsAsync(listing, cancellationToken)
+                .ConfigureAwait(false);
+            superseded.AddRange(more);
+
+            var trade = await ExecuteTradeAsync(listing, buyer, listing.Seller, listing.AskingPrice, cancellationToken)
+                .ConfigureAwait(false);
+            executionSum += trade.Price;
+            tradeIds.Add(trade.TradeId);
+            affectedTraderIds.Add(trade.BuyerTraderId);
+            affectedTraderIds.Add(trade.SellerTraderId);
+        }
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+        await PublishFundsLinkedAsync(buyer, cancellationToken).ConfigureAwait(false);
+        foreach (var listing in listings)
+        {
+            if (listing.Seller is not null)
+            {
+                await PublishFundsLinkedAsync(listing.Seller, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        foreach (var prior in superseded.DistinctBy(t => t.Id))
+        {
+            affectedTraderIds.Add(prior.Id);
+            await PublishFundsLinkedAsync(prior, cancellationToken).ConfigureAwait(false);
+        }
+
+        var avg = executionSum / quantity;
+        return new TerminalOrderResult(
+            requestId,
+            TerminalOrderAction.BuyNow,
+            quantity,
+            quantity,
+            0,
+            0,
+            avg,
+            $"Bought {quantity} pet(s) at the best available asks (average {avg:0.##}).",
+            tradeIds,
+            affectedTraderIds.ToArray());
     }
 
     public async Task<PetAnalysisRow?> GetPetAnalysisAsync(
@@ -1422,6 +1709,208 @@ public sealed class MarketPetDataStore : IMarketPetStore
         await _fundsRealtime.NotifyFundsUpdatedAsync(
             new FundsUpdatedRealtimeDto(trader.ExternalUserId!, trader.AvailableCash, DateTimeOffset.UtcNow),
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<TerminalCrossBuyAttempt> TryExecuteSingleCrossBuyAsync(
+        Guid buyerTraderId,
+        Guid marketEntryId,
+        decimal limitPrice,
+        CancellationToken cancellationToken)
+    {
+        await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var listing = await _db.Listings
+            .Include(l => l.Pet!)
+            .ThenInclude(p => p!.Breed)
+            .Include(l => l.Seller)
+            .Where(l =>
+                l.WithdrawnAt == null &&
+                l.Pet != null &&
+                l.Pet.BreedId == marketEntryId &&
+                l.SellerTraderId != buyerTraderId &&
+                l.AskingPrice <= limitPrice)
+            .OrderBy(l => l.AskingPrice)
+            .ThenBy(l => l.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (listing is null || listing.Pet is null || listing.Seller is null)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return new TerminalCrossBuyAttempt(false, null);
+        }
+
+        var buyer = await _db.Traders.FirstOrDefaultAsync(t => t.Id == buyerTraderId, cancellationToken)
+            .ConfigureAwait(false);
+        if (buyer is null)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return new TerminalCrossBuyAttempt(false, null);
+        }
+
+        if (buyer.AvailableCash < listing.AskingPrice)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return new TerminalCrossBuyAttempt(false, null);
+        }
+
+        var superseded = await SupersedeActivePendingBidsWithNotificationsAsync(listing, cancellationToken)
+            .ConfigureAwait(false);
+        var trade = await ExecuteTradeAsync(listing, buyer, listing.Seller, listing.AskingPrice, cancellationToken)
+            .ConfigureAwait(false);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+        await PublishFundsLinkedAsync(buyer, cancellationToken).ConfigureAwait(false);
+        await PublishFundsLinkedAsync(listing.Seller, cancellationToken).ConfigureAwait(false);
+        foreach (var prior in superseded)
+        {
+            await PublishFundsLinkedAsync(prior, cancellationToken).ConfigureAwait(false);
+        }
+
+        return new TerminalCrossBuyAttempt(true, trade);
+    }
+
+    private async Task<Guid?> FindNextPendingBidListingIdAsync(
+        Guid buyerTraderId,
+        Guid marketEntryId,
+        decimal limitPrice,
+        HashSet<Guid> skip,
+        CancellationToken cancellationToken)
+    {
+        var listing = await _db.Listings
+            .AsNoTracking()
+            .Include(l => l.Pet)
+            .Where(l =>
+                l.WithdrawnAt == null &&
+                l.Pet != null &&
+                l.Pet.BreedId == marketEntryId &&
+                l.SellerTraderId != buyerTraderId &&
+                l.AskingPrice > limitPrice &&
+                !skip.Contains(l.Id))
+            .OrderBy(l => l.AskingPrice)
+            .ThenBy(l => l.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return listing?.Id;
+    }
+
+    private async Task<TerminalPendingBidAttempt> TryExecuteSinglePendingBidAsync(
+        Guid buyerTraderId,
+        Guid listingId,
+        decimal limitPrice,
+        CancellationToken cancellationToken)
+    {
+        if (limitPrice <= 0)
+        {
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var listing = await _db.Listings
+            .Include(l => l.Pet!)
+            .ThenInclude(p => p!.Breed)
+            .Include(l => l.Seller)
+            .FirstOrDefaultAsync(l => l.Id == listingId, cancellationToken)
+            .ConfigureAwait(false);
+        if (listing is null || listing.WithdrawnAt is not null || listing.Pet is null || listing.Seller is null)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        if (listing.SellerTraderId == buyerTraderId)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        if (limitPrice >= listing.AskingPrice)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        var buyer = await _db.Traders.FirstOrDefaultAsync(t => t.Id == buyerTraderId, cancellationToken)
+            .ConfigureAwait(false);
+        if (buyer is null)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        if (!await HasSpendableCashAsync(buyer, limitPrice, cancellationToken).ConfigureAwait(false))
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        var releasedBidderIds = new List<Guid>();
+        var activeBid = await _db.Bids
+            .FirstOrDefaultAsync(
+                b => b.ListingId == listing.Id && b.Status == BidStatus.Active,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (activeBid is not null && limitPrice <= activeBid.Amount)
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        if (activeBid is not null)
+        {
+            await ReleaseBidLockAsync(activeBid, cancellationToken).ConfigureAwait(false);
+            activeBid.Status = BidStatus.Superseded;
+            await AddOutbidNotificationAsync(activeBid, listing, cancellationToken).ConfigureAwait(false);
+            releasedBidderIds.Add(activeBid.BuyerTraderId);
+        }
+
+        if (!await TryDebitSpendableCashAsync(buyer, limitPrice, cancellationToken).ConfigureAwait(false))
+        {
+            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return TerminalPendingBidAttempt.Failed;
+        }
+
+        buyer.LockedCash += limitPrice;
+        var bid = new Bid
+        {
+            Id = Guid.NewGuid(),
+            ListingId = listing.Id,
+            BuyerTraderId = buyerTraderId,
+            Amount = limitPrice,
+            Status = BidStatus.Active,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        _db.Bids.Add(bid);
+        await AddBidReceivedNotificationAsync(listing, bid, buyer, cancellationToken).ConfigureAwait(false);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        await PublishFundsLinkedAsync(buyer, cancellationToken).ConfigureAwait(false);
+        return new TerminalPendingBidAttempt(true, listing.SellerTraderId, releasedBidderIds);
+    }
+
+    private static string BuildTerminalBidMessage(int filled, int pending, int rejected)
+    {
+        if (rejected == 0)
+        {
+            return $"Bid processed: {filled} filled at or below the limit, {pending} new pending below-ask bid(s).";
+        }
+
+        if (filled == 0 && pending == 0)
+        {
+            return "Bid could not be placed: no matching asks, no below-ask listings to bid on, or insufficient balance.";
+        }
+
+        return $"Bid partially processed: {filled} filled, {pending} new pending bid(s), {rejected} not placed against available listings.";
+    }
+
+    private sealed record TerminalCrossBuyAttempt(bool Success, TradeResultRow? Trade);
+    private sealed record TerminalPendingBidAttempt(
+        bool Success,
+        Guid SellerTraderId,
+        IReadOnlyList<Guid> ReleasedBidderIds)
+    {
+        public static TerminalPendingBidAttempt Failed { get; } = new(false, Guid.Empty, []);
     }
 
     private sealed record TerminalMarketProjection(

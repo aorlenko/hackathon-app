@@ -75,4 +75,5 @@ public sealed record TerminalOrderResult(
     int RejectedQuantity,
     decimal? AverageExecutedPrice,
     string Message,
-    IReadOnlyList<Guid> AffectedTradeIds);
+    IReadOnlyList<Guid> AffectedTradeIds,
+    IReadOnlyList<Guid> AffectedTraderIds);

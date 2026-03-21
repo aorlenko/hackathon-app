@@ -279,3 +279,66 @@ export const getTerminalWorkspace = (
     `${env.marketApiBaseUrl}/api/pets/terminal/workspace/${encodeURIComponent(marketEntryId)}`,
     { headers: createHeaders(accessToken), cache: "no-store" },
   );
+
+/** Terminal order submission — authenticated trader resolved server-side. */
+export type TerminalOrderBidAskBody = {
+  marketEntryId: string;
+  quantity: number;
+  limitPrice: number;
+};
+
+export type TerminalOrderBuyNowBody = {
+  marketEntryId: string;
+  quantity: number;
+};
+
+export type TerminalOrderResultDto = {
+  requestId: string;
+  action: string;
+  requestedQuantity: number;
+  filledQuantity: number;
+  pendingQuantity: number;
+  rejectedQuantity: number;
+  averageExecutedPrice: number | null;
+  message: string;
+  affectedTradeIds: string[];
+};
+
+export const submitTerminalBid = (
+  body: TerminalOrderBidAskBody,
+  accessToken?: string,
+) =>
+  fetchJson<TerminalOrderResultDto>(
+    `${env.marketApiBaseUrl}/api/pets/terminal/orders/bid`,
+    {
+      method: "POST",
+      headers: createHeaders(accessToken),
+      body: JSON.stringify(body),
+    },
+  );
+
+export const submitTerminalAsk = (
+  body: TerminalOrderBidAskBody,
+  accessToken?: string,
+) =>
+  fetchJson<TerminalOrderResultDto>(
+    `${env.marketApiBaseUrl}/api/pets/terminal/orders/ask`,
+    {
+      method: "POST",
+      headers: createHeaders(accessToken),
+      body: JSON.stringify(body),
+    },
+  );
+
+export const submitTerminalBuyNow = (
+  body: TerminalOrderBuyNowBody,
+  accessToken?: string,
+) =>
+  fetchJson<TerminalOrderResultDto>(
+    `${env.marketApiBaseUrl}/api/pets/terminal/orders/buy-now`,
+    {
+      method: "POST",
+      headers: createHeaders(accessToken),
+      body: JSON.stringify(body),
+    },
+  );

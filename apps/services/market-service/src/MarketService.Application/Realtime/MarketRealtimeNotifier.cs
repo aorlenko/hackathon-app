@@ -20,17 +20,27 @@ public interface IMarketRealtimeNotifier
     Task NotifyTradeRecordedAsync(TradeRecorded @event, CancellationToken cancellationToken = default);
     Task NotifySettlementUpdatedAsync(string buyerUserId, string sellerUserId, SettlementUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
     Task NotifyFundsUpdatedAsync(FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default);
+    Task NotifyTradingPetsStateChangedAsync(
+        IReadOnlyCollection<Guid> traderIds,
+        bool includeNotifications = false,
+        bool includeLeaderboard = false,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class MarketRealtimeNotifier : IMarketRealtimeNotifier
 {
     private readonly Markets.GetOrderBookHandler _orderBookHandler;
     private readonly IMarketHubPublisher _publisher;
+    private readonly ITradingPetsRealtimePublisher? _tradingPetsPublisher;
 
-    public MarketRealtimeNotifier(Markets.GetOrderBookHandler orderBookHandler, IMarketHubPublisher publisher)
+    public MarketRealtimeNotifier(
+        Markets.GetOrderBookHandler orderBookHandler,
+        IMarketHubPublisher publisher,
+        ITradingPetsRealtimePublisher? tradingPetsPublisher = null)
     {
         _orderBookHandler = orderBookHandler;
         _publisher = publisher;
+        _tradingPetsPublisher = tradingPetsPublisher;
     }
 
     public async Task NotifyOrderBookUpdatedAsync(string symbol, CancellationToken cancellationToken = default)
@@ -60,5 +70,36 @@ public sealed class MarketRealtimeNotifier : IMarketRealtimeNotifier
     public Task NotifyFundsUpdatedAsync(FundsUpdatedRealtimeDto payload, CancellationToken cancellationToken = default)
     {
         return _publisher.PublishFundsUpdatedAsync(payload.UserId, payload, cancellationToken);
+    }
+
+    public async Task NotifyTradingPetsStateChangedAsync(
+        IReadOnlyCollection<Guid> traderIds,
+        bool includeNotifications = false,
+        bool includeLeaderboard = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (_tradingPetsPublisher is null)
+        {
+            return;
+        }
+
+        foreach (var traderId in traderIds.Distinct())
+        {
+            await _tradingPetsPublisher.NotifyTraderSnapshotRefreshAsync(traderId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (includeNotifications)
+            {
+                await _tradingPetsPublisher.NotifyTraderNotificationsAsync(traderId, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        await _tradingPetsPublisher.NotifyMarketListingsRefreshAsync(cancellationToken).ConfigureAwait(false);
+
+        if (includeLeaderboard)
+        {
+            await _tradingPetsPublisher.NotifyLeaderboardRefreshAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 }

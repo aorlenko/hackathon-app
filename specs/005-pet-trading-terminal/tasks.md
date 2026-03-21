@@ -88,18 +88,18 @@ description: "Task list for Pet Trading Terminal Experience (005-pet-trading-ter
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Add contract coverage for terminal bid, ask, and buy-now endpoints in `tests/contract/market-service/MarketService.ContractTests/PetsTerminalOrdersContractTests.cs`
-- [ ] T020 [P] [US2] Add backend integration coverage for multi-step terminal order submission and workspace reconciliation in `tests/integration/market-trade/MarketTrade.IntegrationTests/PetTradingTerminalOrderFlowTests.cs`
-- [ ] T021 [P] [US2] Add frontend coverage for submit states, validation failures, and backend outcome messaging in `apps/frontend-spa/src/features/trading-pets/__tests__/TerminalTradingPanel.test.tsx`
+- [X] T019 [P] [US2] Add contract coverage for terminal bid, ask, and buy-now endpoints in `tests/contract/market-service/MarketService.ContractTests/PetsTerminalOrdersContractTests.cs`
+- [X] T020 [P] [US2] Add backend integration coverage for multi-step terminal order submission and workspace reconciliation in `tests/integration/market-trade/MarketTrade.IntegrationTests/PetTradingTerminalOrderFlowTests.cs`
+- [X] T021 [P] [US2] Add frontend coverage for submit states, validation failures, and backend outcome messaging in `apps/frontend-spa/src/features/trading-pets/__tests__/TerminalTradingPanel.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement backend multi-quantity ask, bid, and buy-now execution over existing pet-trading rules in `apps/services/market-service/src/MarketService.Infrastructure/Persistence/MarketPetDataStore.cs`
-- [ ] T023 [US2] Implement normalized terminal order orchestration and result-message shaping in `apps/services/market-service/src/MarketService.Application/Pets/Terminal/PlaceTerminalOrderHandler.cs`
-- [ ] T024 [US2] Map terminal order endpoints for `/orders/bid`, `/orders/ask`, and `/orders/buy-now` in `apps/services/market-service/src/MarketService.Api/Endpoints/PetsTerminalOrdersEndpoints.cs`
-- [ ] T025 [US2] Extend terminal order DTOs and REST clients for bid, ask, and buy-now flows in `apps/frontend-spa/src/features/trading-pets/tradingPetsApi.ts`
-- [ ] T026 [US2] Wire trading-panel submit actions, optimistic-disabled states, and backend-confirmed outcome banners in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalTradingPanel.tsx`
-- [ ] T027 [US2] Reconcile post-submit refreshes and stale-state recovery at the workspace level in `apps/frontend-spa/src/features/trading-pets/TraderWorkspacePage.tsx`
+- [X] T022 [US2] Implement backend multi-quantity ask, bid, and buy-now execution over existing pet-trading rules in `apps/services/market-service/src/MarketService.Infrastructure/Persistence/MarketPetDataStore.cs`
+- [X] T023 [US2] Implement normalized terminal order orchestration and result-message shaping in `apps/services/market-service/src/MarketService.Application/Pets/Terminal/PlaceTerminalOrderHandler.cs`
+- [X] T024 [US2] Map terminal order endpoints for `/orders/bid`, `/orders/ask`, and `/orders/buy-now` in `apps/services/market-service/src/MarketService.Api/Endpoints/PetsTerminalOrdersEndpoints.cs`
+- [X] T025 [US2] Extend terminal order DTOs and REST clients for bid, ask, and buy-now flows in `apps/frontend-spa/src/features/trading-pets/tradingPetsApi.ts`
+- [X] T026 [US2] Wire trading-panel submit actions, optimistic-disabled states, and backend-confirmed outcome banners in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalTradingPanel.tsx`
+- [X] T027 [US2] Reconcile post-submit refreshes and stale-state recovery at the workspace level in `apps/frontend-spa/src/features/trading-pets/TraderWorkspacePage.tsx`
 
 **Checkpoint**: Traders can act directly from the terminal page and the page always converges back to the backend-confirmed state.
 
@@ -113,18 +113,18 @@ description: "Task list for Pet Trading Terminal Experience (005-pet-trading-ter
 
 ### Tests for User Story 3
 
-- [ ] T028 [P] [US3] Add backend integration coverage for terminal-related realtime invalidation paths in `tests/integration/realtime/Realtime.IntegrationTests/PetTradingTerminalRealtimeTests.cs`
-- [ ] T029 [P] [US3] Expand terminal SignalR and polling-fallback coverage in `apps/frontend-spa/src/features/trading-pets/__tests__/tradingPetsRealtime.test.tsx`
-- [ ] T030 [P] [US3] Add diff/highlight coverage for new trades and changed prices in `apps/frontend-spa/src/features/trading-pets/__tests__/TerminalHighlights.test.tsx`
+- [X] T028 [P] [US3] Add backend integration coverage for terminal-related realtime invalidation paths in `tests/integration/realtime/Realtime.IntegrationTests/PetTradingTerminalRealtimeTests.cs`
+- [X] T029 [P] [US3] Expand terminal SignalR and polling-fallback coverage in `apps/frontend-spa/src/features/trading-pets/__tests__/tradingPetsRealtime.test.tsx`
+- [X] T030 [P] [US3] Add diff/highlight coverage for new trades and changed prices in `apps/frontend-spa/src/features/trading-pets/__tests__/TerminalHighlights.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Route terminal-related invalidation events through the existing realtime notifier flows in `apps/services/market-service/src/MarketService.Application/Realtime/MarketRealtimeNotifier.cs`
-- [ ] T032 [US3] Implement snapshot-diff helpers for new-trade and price-change highlighting in `apps/frontend-spa/src/features/trading-pets/terminal/terminalHighlights.ts`
-- [ ] T033 [US3] Tighten the terminal route fallback to roughly 3-second disconnect detection and 2-second polling in `apps/frontend-spa/src/features/trading-pets/useTradingPetsRealtime.ts`
-- [ ] T034 [US3] Apply new-trade highlighting and transient activity states in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalTradeFeed.tsx`
-- [ ] T035 [US3] Apply price-direction flashes and trend emphasis in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalMarketList.tsx`
-- [ ] T036 [US3] Apply bid/ask-side emphasis and refreshed-level highlighting in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalOrderBook.tsx`
+- [X] T031 [US3] Route terminal-related invalidation events through the existing realtime notifier flows in `apps/services/market-service/src/MarketService.Application/Realtime/MarketRealtimeNotifier.cs`
+- [X] T032 [US3] Implement snapshot-diff helpers for new-trade and price-change highlighting in `apps/frontend-spa/src/features/trading-pets/terminal/terminalHighlights.ts`
+- [X] T033 [US3] Tighten the terminal route fallback to roughly 3-second disconnect detection and 2-second polling in `apps/frontend-spa/src/features/trading-pets/useTradingPetsRealtime.ts`
+- [X] T034 [US3] Apply new-trade highlighting and transient activity states in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalTradeFeed.tsx`
+- [X] T035 [US3] Apply price-direction flashes and trend emphasis in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalMarketList.tsx`
+- [X] T036 [US3] Apply bid/ask-side emphasis and refreshed-level highlighting in `apps/frontend-spa/src/features/trading-pets/terminal/TerminalOrderBook.tsx`
 
 **Checkpoint**: The terminal continues to feel active under live market changes, and fallback behavior still converges to backend truth when SignalR is degraded.
 
@@ -135,7 +135,7 @@ description: "Task list for Pet Trading Terminal Experience (005-pet-trading-ter
 **Purpose**: Protect unaffected routes, finish the dark-theme terminal presentation, and capture validation evidence.
 
 - [ ] T037 [P] Add sibling-route regression coverage for `/pets/market`, `/pets/leaderboard`, `/history/trades`, and `/history/settlements` in `apps/frontend-spa/src/features/trading-pets/__tests__/PetTradingRoutes.test.tsx`
-- [ ] T038 [P] Align terminal layout density, dark-theme tokens, and buy-vs-sell color hierarchy in `apps/frontend-spa/src/styles.css`
+- [X] T038 [P] Align terminal layout density, dark-theme tokens, and buy-vs-sell color hierarchy in `apps/frontend-spa/src/styles.css`
 - [ ] T039 [P] Add regression assertions that existing pet-trading endpoints stay compatible alongside the new terminal surface in `tests/contract/market-service/MarketService.ContractTests/MarketApiContractsTests.cs`
 - [ ] T040 Run the quickstart walkthrough and record PRF-001, PRF-002, and PRF-003 observations in `specs/005-pet-trading-terminal/quickstart.md`
 

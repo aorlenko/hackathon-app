@@ -1,17 +1,33 @@
 import type { TerminalOrderBookDto, TerminalMarketRowDto } from "../tradingPetsApi";
+import { getOrderBookLevelKey, type TerminalOrderBookLevelHighlight } from "./terminalHighlights";
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 type Props = {
   marketEntry: TerminalMarketRowDto | null;
   orderBook: TerminalOrderBookDto | null;
+  bidHighlights: Record<string, TerminalOrderBookLevelHighlight>;
+  askHighlights: Record<string, TerminalOrderBookLevelHighlight>;
   loading: boolean;
   error: string | null;
+};
+
+const levelClassName = (
+  side: "bid" | "ask",
+  highlight?: TerminalOrderBookLevelHighlight,
+) => {
+  if (!highlight) {
+    return `trading-pets-terminal__book-row trading-pets-terminal__book-row--${side}`;
+  }
+
+  return `trading-pets-terminal__book-row trading-pets-terminal__book-row--${side} trading-pets-terminal__book-row--${highlight.change}`;
 };
 
 export const TerminalOrderBook = ({
   marketEntry,
   orderBook,
+  bidHighlights,
+  askHighlights,
   loading,
   error,
 }: Props) => (
@@ -38,6 +54,9 @@ export const TerminalOrderBook = ({
     {loading && !orderBook ? (
       <p className="trading-pets-loading muted">Loading order book…</p>
     ) : null}
+    {loading && orderBook ? (
+      <p className="muted small">Refreshing depth…</p>
+    ) : null}
     {!loading && !marketEntry ? (
       <p className="trading-pets-empty">No market selected.</p>
     ) : null}
@@ -48,7 +67,9 @@ export const TerminalOrderBook = ({
         </p>
         <div className="trading-pets-terminal__book-columns">
           <div>
-            <h3 className="trading-pets-subheading">Bids</h3>
+            <h3 className="trading-pets-subheading trading-pets-terminal__side trading-pets-terminal__side--bid">
+              Bids
+            </h3>
             {orderBook.bids.length === 0 ? (
               <p className="trading-pets-empty">No bids</p>
             ) : (
@@ -62,7 +83,13 @@ export const TerminalOrderBook = ({
                 </thead>
                 <tbody>
                   {orderBook.bids.map((r, i) => (
-                    <tr key={`${r.price}-${i}`}>
+                    <tr
+                      key={`${r.price}-${i}`}
+                      className={levelClassName(
+                        "bid",
+                        bidHighlights[getOrderBookLevelKey(r)],
+                      )}
+                    >
                       <td>{money(r.price)}</td>
                       <td>{r.quantity}</td>
                       <td>{r.orderCount}</td>
@@ -73,7 +100,9 @@ export const TerminalOrderBook = ({
             )}
           </div>
           <div>
-            <h3 className="trading-pets-subheading">Asks</h3>
+            <h3 className="trading-pets-subheading trading-pets-terminal__side trading-pets-terminal__side--ask">
+              Asks
+            </h3>
             {orderBook.asks.length === 0 ? (
               <p className="trading-pets-empty">No asks</p>
             ) : (
@@ -87,7 +116,13 @@ export const TerminalOrderBook = ({
                 </thead>
                 <tbody>
                   {orderBook.asks.map((r, i) => (
-                    <tr key={`${r.price}-${i}`}>
+                    <tr
+                      key={`${r.price}-${i}`}
+                      className={levelClassName(
+                        "ask",
+                        askHighlights[getOrderBookLevelKey(r)],
+                      )}
+                    >
                       <td>{money(r.price)}</td>
                       <td>{r.quantity}</td>
                       <td>{r.orderCount}</td>

@@ -35,6 +35,14 @@ export const TraderWorkspacePage = () => {
     invalidateKey: panelTick,
   });
 
+  const onTerminalOrderSettled = useCallback(async () => {
+    await Promise.all([
+      terminal.refreshMarkets(),
+      terminal.refreshWorkspace(),
+      refresh(),
+    ]);
+  }, [terminal.refreshMarkets, terminal.refreshWorkspace, refresh]);
+
   const marketEntry =
     terminal.workspace?.marketEntry ??
     terminal.markets.find(
@@ -47,8 +55,9 @@ export const TraderWorkspacePage = () => {
       <header className="trading-pets-page__header">
         <h1>Trading terminal</h1>
         <p className="muted">
-          Read-only workspace: markets, depth, recent prints, and account context
-          for the selected breed market.
+          Markets, depth, recent prints, and account context for the selected
+          breed market. Submit bids, asks, or buy-now orders from the trading
+          panel.
         </p>
       </header>
 
@@ -72,6 +81,7 @@ export const TraderWorkspacePage = () => {
       <div className="trading-pets-terminal">
         <TerminalMarketList
           markets={terminal.markets}
+          highlights={terminal.marketHighlights}
           selectedMarketEntryId={terminal.selectedMarketEntryId}
           onSelect={terminal.selectMarket}
           loading={terminal.marketsLoading}
@@ -80,6 +90,8 @@ export const TraderWorkspacePage = () => {
         <TerminalOrderBook
           marketEntry={marketEntry}
           orderBook={terminal.workspace?.orderBook ?? null}
+          bidHighlights={terminal.bidLevelHighlights}
+          askHighlights={terminal.askLevelHighlights}
           loading={terminal.workspaceLoading}
           error={terminal.workspaceError}
         />
@@ -88,10 +100,13 @@ export const TraderWorkspacePage = () => {
           accountSummary={terminal.workspace?.accountSummary ?? null}
           loading={terminal.workspaceLoading}
           error={terminal.workspaceError}
+          accessToken={auth.accessToken}
+          onOrderSettled={onTerminalOrderSettled}
         />
         <TerminalTradeFeed
           marketLabel={marketEntry?.displayName ?? null}
           trades={terminal.workspace?.recentTrades ?? []}
+          newTradeIds={terminal.newTradeIds}
           loading={terminal.workspaceLoading}
           error={terminal.workspaceError}
         />

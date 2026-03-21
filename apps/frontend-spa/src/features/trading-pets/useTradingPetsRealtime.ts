@@ -6,8 +6,8 @@ import {
 import { useEffect, useRef } from "react";
 import { env } from "../../config/env";
 
-const POLL_MS = 5000;
-const DISCONNECT_POLL_AFTER_MS = 10_000;
+const POLL_MS = 2000;
+const DISCONNECT_POLL_AFTER_MS = 3000;
 
 type Args = {
   traderId: string;
@@ -33,9 +33,13 @@ export const useTradingPetsRealtime = ({
     let cancelled = false;
 
     const startPoll = () => {
+      if (cancelled) {
+        return;
+      }
       if (pollTimer) {
         window.clearInterval(pollTimer);
       }
+      void refreshRef.current();
       pollTimer = window.setInterval(() => {
         void refreshRef.current();
       }, POLL_MS);
@@ -46,6 +50,15 @@ export const useTradingPetsRealtime = ({
         window.clearInterval(pollTimer);
         pollTimer = undefined;
       }
+    };
+
+    const schedulePollFallback = () => {
+      if (disconnectTimer) {
+        window.clearTimeout(disconnectTimer);
+      }
+      disconnectTimer = window.setTimeout(() => {
+        startPoll();
+      }, DISCONNECT_POLL_AFTER_MS);
     };
 
     const connection = new HubConnectionBuilder()
@@ -85,9 +98,7 @@ export const useTradingPetsRealtime = ({
           if (connection.state === HubConnectionState.Connected) {
             startPoll();
           } else {
-            disconnectTimer = window.setTimeout(() => {
-              startPoll();
-            }, DISCONNECT_POLL_AFTER_MS);
+            schedulePollFallback();
           }
         }
       }
@@ -95,6 +106,10 @@ export const useTradingPetsRealtime = ({
 
     connection.onreconnected(() => {
       stopPoll();
+      if (disconnectTimer) {
+        window.clearTimeout(disconnectTimer);
+        disconnectTimer = undefined;
+      }
       void (async () => {
         try {
           await connection.invoke("SubscribeTradingPetsTrader", traderId);
@@ -112,9 +127,7 @@ export const useTradingPetsRealtime = ({
       if (cancelled) {
         return;
       }
-      disconnectTimer = window.setTimeout(() => {
-        startPoll();
-      }, DISCONNECT_POLL_AFTER_MS);
+      schedulePollFallback();
     });
 
     return () => {

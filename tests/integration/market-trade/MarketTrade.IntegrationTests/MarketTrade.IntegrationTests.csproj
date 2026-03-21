@@ -19,6 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\apps\services\market-service\src\MarketService.Application\MarketService.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\services\market-service\src\MarketService.Infrastructure\MarketService.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\..\libs\test-support\src\Trading.TestSupport\Trading.TestSupport.csproj" />
   </ItemGroup>
 

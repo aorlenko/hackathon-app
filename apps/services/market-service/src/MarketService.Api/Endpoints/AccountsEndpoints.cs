@@ -84,7 +84,10 @@ public static class AccountsEndpoints
         var accounts = await store.GetAccountsAsync(requestedUserIds, cancellationToken).ConfigureAwait(false);
         var response = accounts
             .OrderBy(account => orderLookup[account.UserId])
-            .Select(account => new AccountIdentityDto(account.UserId, account.DisplayName, account.Email))
+            .Select(account => new AccountIdentityDto(
+                account.UserId,
+                AccountPublicDisplayName.ForDemoAccount(account.DisplayName, account.Email),
+                account.Email))
             .ToList();
 
         return Results.Ok(response);

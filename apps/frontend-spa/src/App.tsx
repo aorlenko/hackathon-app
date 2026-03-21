@@ -1,5 +1,4 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { FundsPanel } from "./features/account/FundsPanel";
 import { useTradingAuth } from "./features/auth/AuthProvider";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 
@@ -22,7 +21,9 @@ import {
   LeaderboardPage,
   MarketListingsPage,
   MyPetTraderProvider,
+  MyPetsPage,
   PetAnalysisPage,
+  PetTraderAuthSummaryMetrics,
   TraderWorkspacePage,
 } from "./features/trading-pets";
 
@@ -35,7 +36,7 @@ export const Header = () => {
         <div className="app-header__brand">
           <h1>Pet Ledger</h1>
           <p className="muted">
-            Pet marketplace — primary supply, resale listings, and settlement history.
+            Pet marketplace — primary supply, pets for sale from other traders, and settlement history.
           </p>
         </div>
         <div className="auth-panel">
@@ -53,7 +54,7 @@ export const Header = () => {
                     {`Authenticated via ${auth.mode === "auth0" ? "Auth0" : "demo mode"}`}
                   </p>
                 </div>
-                <FundsPanel />
+                <PetTraderAuthSummaryMetrics />
               </div>
               <button
                 className="secondary-button auth-panel__signout"
@@ -71,7 +72,8 @@ export const Header = () => {
       </div>
       <nav className="nav-links" aria-label="Primary">
         <NavLink to="/pets/workspace">Pet trading</NavLink>
-        <NavLink to="/pets/market">Listings</NavLink>
+        <NavLink to="/pets/my-pets">My pets</NavLink>
+        <NavLink to="/pets/market">Pets for sale</NavLink>
         <NavLink to="/pets/leaderboard">Leaderboard</NavLink>
         <NavLink to="/history/trades">Trade history</NavLink>
         <NavLink to="/history/settlements">Settlement history</NavLink>
@@ -95,6 +97,7 @@ export const App = () => {
             />
             <Route element={<MyPetTraderProvider />}>
               <Route path="/pets/workspace" element={<TraderWorkspacePage />} />
+              <Route path="/pets/my-pets" element={<MyPetsPage />} />
               <Route path="/pets/market" element={<MarketListingsPage />} />
               <Route path="/pets/leaderboard" element={<LeaderboardPage />} />
               <Route path="/pets/analysis/:petId" element={<PetAnalysisPage />} />

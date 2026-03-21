@@ -6,6 +6,7 @@ interface RecentTradesPanelProps {
   identities: Map<string, AccountIdentity>;
   currentUserId?: string | null;
   currentUserEmail?: string | null;
+  currentUserDisplayName?: string | null;
 }
 
 export const RecentTradesPanel = ({
@@ -13,6 +14,7 @@ export const RecentTradesPanel = ({
   identities,
   currentUserId,
   currentUserEmail,
+  currentUserDisplayName,
 }: RecentTradesPanelProps) => {
   return (
     <section className="card">
@@ -43,6 +45,7 @@ export const RecentTradesPanel = ({
                   {formatParticipantLabel(trade.buyerUserId, identities, {
                     currentUserId,
                     currentUserEmail,
+                    currentUserDisplayName,
                     fallbackLabel: "Buyer",
                   })}
                 </td>
@@ -50,6 +53,7 @@ export const RecentTradesPanel = ({
                   {formatParticipantLabel(trade.sellerUserId, identities, {
                     currentUserId,
                     currentUserEmail,
+                    currentUserDisplayName,
                     fallbackLabel: "Seller",
                   })}
                 </td>

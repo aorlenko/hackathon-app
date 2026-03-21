@@ -80,6 +80,8 @@ export const TradeHistoryPage = () => {
                       {
                         currentUserId: auth.userId,
                         currentUserEmail: auth.accountSnapshot?.email,
+                        currentUserDisplayName:
+                          auth.accountSnapshot?.displayName ?? auth.displayName,
                         fallbackLabel: "Buyer",
                       },
                     )}
@@ -91,6 +93,8 @@ export const TradeHistoryPage = () => {
                       {
                         currentUserId: auth.userId,
                         currentUserEmail: auth.accountSnapshot?.email,
+                        currentUserDisplayName:
+                          auth.accountSnapshot?.displayName ?? auth.displayName,
                         fallbackLabel: "Seller",
                       },
                     )}

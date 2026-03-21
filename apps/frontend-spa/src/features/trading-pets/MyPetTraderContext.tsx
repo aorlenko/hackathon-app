@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Outlet } from "react-router-dom";
 import { useTradingAuth } from "../auth/AuthProvider";
+import { emitPetTraderSnapshotUpdated } from "./petTraderSnapshotEvents";
 import { getMyTraderSnapshot, type TraderSnapshotDto } from "./tradingPetsApi";
 
 type Ctx = {
@@ -38,9 +39,10 @@ export const MyPetTraderProvider = () => {
       setSnapshot(s);
       setTraderId(s.traderId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load pet trader");
-      setSnapshot(null);
-      setTraderId("");
+      const message = e instanceof Error ? e.message : "Could not load pet trader";
+      setError(message);
+      setSnapshot((prev) => (prev?.traderId ? prev : null));
+      setTraderId((prev) => (prev || ""));
     } finally {
       setLoading(false);
     }
@@ -50,6 +52,12 @@ export const MyPetTraderProvider = () => {
     setLoading(true);
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (snapshot?.traderId) {
+      emitPetTraderSnapshotUpdated(snapshot);
+    }
+  }, [snapshot]);
 
   const value = useMemo(
     () => ({ traderId, snapshot, loading, error, refresh }),
@@ -64,7 +72,7 @@ export const MyPetTraderProvider = () => {
     );
   }
 
-  if (error || !traderId) {
+  if (!traderId) {
     return (
       <div className="trading-pets-page trading-pets-page--centered">
         <p className="trading-pets-error">{error ?? "Unable to resolve pet trader."}</p>

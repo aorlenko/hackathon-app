@@ -7,8 +7,6 @@ internal static class MarketSeedData
     public static readonly Guid AbcItemId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid XyzItemId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     public static readonly DateTimeOffset CreatedAtUtc = new(2026, 3, 16, 0, 0, 0, TimeSpan.Zero);
-    public const decimal AutoProvisionedCashAvailable = 100000m;
-
     public static readonly Item[] Items =
     [
         new Item

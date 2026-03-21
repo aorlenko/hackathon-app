@@ -8,7 +8,7 @@ using Trading.Contracts.Http;
 
 namespace MarketService.Application.Orders;
 
-public sealed record MarketUserProfile(string UserId, string DisplayName, string Email);
+public sealed record MarketUserProfile(string UserId, string DisplayName, string? Email);
 
 public sealed record PlaceOrderOutcome(PlaceOrderResponse Response, IReadOnlyList<OrderMatched> Matches, string CorrelationId);
 
@@ -39,7 +39,7 @@ public sealed class PlaceOrderHandler
 
     public Task<PlaceOrderOutcome> HandleAsync(string userId, PlaceOrderRequest request, CancellationToken cancellationToken = default)
     {
-        return HandleAsync(new MarketUserProfile(userId, userId, string.Empty), request, cancellationToken);
+        return HandleAsync(new MarketUserProfile(userId, userId, null), request, cancellationToken);
     }
 
     public async Task<PlaceOrderOutcome> HandleAsync(MarketUserProfile user, PlaceOrderRequest request, CancellationToken cancellationToken = default)

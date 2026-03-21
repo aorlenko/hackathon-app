@@ -34,15 +34,17 @@ export const MarketListingsPage = () => {
   return (
     <div className="trading-pets-page">
       <header className="trading-pets-page__header">
-        <h1>Pet listings</h1>
+        <h1>Pets for sale</h1>
         <p className="muted">
-          Resale offers: pets listed by traders at an asking price. Newest first, with breed supply and recent trade
-          context.
+          Resale marketplace: pets other traders are offering at an asking price. Newest first, with breed supply and
+          recent trade context.
         </p>
       </header>
       <ul className="trading-pets-list trading-pets-list--market">
         {rows.length === 0 && !error ? (
-          <li className="trading-pets-empty">No open listings yet. Buy a pet on the trading page, then create a listing.</li>
+          <li className="trading-pets-empty">
+            No pets for sale yet. Buy a pet on Pet trading, then post one for sale from there.
+          </li>
         ) : null}
         {rows.map((l) => {
           const sellerClause = listingSellerClause(
@@ -58,7 +60,7 @@ export const MarketListingsPage = () => {
               {sellerClause ? <> · {sellerClause}</> : null}
             </div>
             <div className="muted small">
-              Listed {new Date(l.createdAt).toLocaleString()} · Pet{" "}
+              Posted {new Date(l.createdAt).toLocaleString()} · Pet{" "}
               <Link to={`/pets/analysis/${l.petId}`}>{l.petId.slice(0, 8)}…</Link>
             </div>
             <div className="muted small">

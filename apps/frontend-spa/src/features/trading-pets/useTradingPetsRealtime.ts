@@ -13,15 +13,20 @@ type Args = {
   traderId: string;
   accessToken?: string;
   onRefreshSnapshot: () => void | Promise<void>;
+  /** Called when the hub signals new trader notifications (in addition to snapshot refresh). */
+  onTraderNotificationsAdded?: () => void | Promise<void>;
 };
 
 export const useTradingPetsRealtime = ({
   traderId,
   accessToken,
   onRefreshSnapshot,
+  onTraderNotificationsAdded,
 }: Args) => {
   const refreshRef = useRef(onRefreshSnapshot);
   refreshRef.current = onRefreshSnapshot;
+  const notificationsHintRef = useRef(onTraderNotificationsAdded);
+  notificationsHintRef.current = onTraderNotificationsAdded;
 
   useEffect(() => {
     if (!traderId || !accessToken) {
@@ -59,7 +64,10 @@ export const useTradingPetsRealtime = ({
     const bind = async () => {
       connection.on("trader.snapshotUpdated", () => void refreshRef.current());
       connection.on("market.listingsUpdated", () => void refreshRef.current());
-      connection.on("trader.notificationsAdded", () => void refreshRef.current());
+      connection.on("trader.notificationsAdded", () => {
+        void refreshRef.current();
+        void notificationsHintRef.current?.();
+      });
       connection.on("leaderboard.updated", () => void refreshRef.current());
       connection.on("pet.valuationBatch", () => void refreshRef.current());
     };

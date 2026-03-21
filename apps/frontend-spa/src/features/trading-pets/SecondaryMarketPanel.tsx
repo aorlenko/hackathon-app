@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   createListing,
   getMarketListings,
@@ -8,6 +9,7 @@ import {
 } from "./tradingPetsApi";
 import { ListingSellerActions } from "./ListingSellerActions";
 import { listingSellerClause } from "./listingSellerLabel";
+import { formatShortPetId } from "./petDisplayUtils";
 
 type Props = {
   traderId: string;
@@ -30,6 +32,7 @@ export const SecondaryMarketPanel = ({
   const [bidListingId, setBidListingId] = useState<string>("");
   const [bidAmount, setBidAmount] = useState(25);
   const [error, setError] = useState<string | null>(null);
+  const [listingsLoading, setListingsLoading] = useState(false);
 
   const selectedListing = useMemo(
     () => listings.find((l) => l.listingId === bidListingId) ?? null,
@@ -44,10 +47,13 @@ export const SecondaryMarketPanel = ({
 
   const load = useCallback(async () => {
     setError(null);
+    setListingsLoading(true);
     try {
       setListings(await getMarketListings(accessToken));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load listings");
+      setError(e instanceof Error ? e.message : "Couldn’t load pets for sale");
+    } finally {
+      setListingsLoading(false);
     }
   }, [accessToken]);
 
@@ -62,7 +68,7 @@ export const SecondaryMarketPanel = ({
     setError(null);
     const trimmedPetId = petId.trim();
     if (!trimmedPetId) {
-      setError("Choose a pet from your inventory before creating a listing.");
+      setError("Choose a pet from your inventory before posting it for sale.");
       return;
     }
 
@@ -74,14 +80,14 @@ export const SecondaryMarketPanel = ({
       onChanged();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create listing");
+      setError(e instanceof Error ? e.message : "Couldn’t post this pet for sale");
     }
   };
 
   const bid = async () => {
     setError(null);
     if (!selectedListing) {
-      setError("Choose a listing to bid on.");
+      setError("Choose a pet for sale to bid on.");
       return;
     }
     try {
@@ -95,24 +101,25 @@ export const SecondaryMarketPanel = ({
   };
 
   return (
-    <section className="trading-pets-card">
+    <section className="trading-pets-card trading-pets-secondary">
       <header className="trading-pets-card__header">
-        <h2>Secondary market</h2>
+        <h2 id="trading-region-secondary-title">Resale marketplace</h2>
+        <p className="muted small">
+          <strong>Pets for sale</strong> are offers from you or other traders on the resale marketplace, each with an{" "}
+          <strong>asking price</strong>. Buyers can pay the ask or place a <strong>bid</strong> for the seller to
+          accept.
+        </p>
       </header>
       <div className="trading-pets-card__body">
-        <p className="muted small">
-          A <strong>listing</strong> is a pet from inventory offered for resale at an asking price. Other traders can
-          pay the ask or place a bid for you to accept.
-        </p>
         <div className="trading-pets-form">
-          <h3 className="trading-pets-subheading">List a pet</h3>
+          <h3 className="trading-pets-subheading">Offer a pet for sale</h3>
           <label className="trading-pets-field">
-            <span>Pet</span>
+            <span>Pet from your inventory</span>
             <select value={petId} onChange={(e) => setPetId(e.target.value)}>
               <option value="">Select…</option>
               {inventory.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.breedName} · intrinsic ${p.intrinsicValue.toFixed(2)}
+                  {p.breedName} · {formatShortPetId(p.id)}
                 </option>
               ))}
             </select>
@@ -132,16 +139,25 @@ export const SecondaryMarketPanel = ({
             disabled={!petId.trim() || inventory.length === 0}
             onClick={() => void listPet()}
           >
-            Create listing
+            Post for sale
           </button>
           {inventory.length === 0 ? (
-            <p className="muted small">Buy a pet on the primary market first — then you can list it here.</p>
+            <p className="muted small">
+              Add pets from primary supply, or open{" "}
+              <Link to="/pets/my-pets" className="trading-pets-text-link">
+                My pets
+              </Link>{" "}
+              to confirm your inventory — then choose a pet here to post for sale.
+            </p>
           ) : null}
         </div>
         <div className="trading-pets-form">
-          <h3 className="trading-pets-subheading">Open listings</h3>
-          <p className="muted small">Everyone&apos;s active resale offers (including yours).</p>
-          <ul className="trading-pets-list">
+          <h3 className="trading-pets-subheading">Pets for sale now</h3>
+          <p className="muted small">Active offers from all traders (including yours).</p>
+          {listingsLoading && listings.length === 0 ? (
+            <p className="muted small trading-pets-panel-loading">Loading pets for sale…</p>
+          ) : null}
+          <ul className="trading-pets-list trading-pets-listings">
             {listings.map((l) => {
               const sellerClause = listingSellerClause(
                 l.sellerTraderId,
@@ -151,53 +167,62 @@ export const SecondaryMarketPanel = ({
               );
               const isBidSelected = l.listingId === bidListingId;
               return (
-              <li
-                key={l.listingId}
-                className={isBidSelected ? "trading-pets-list__item--selected" : undefined}
-              >
-                <div>
-                  <strong>{l.breedName}</strong> · ask ${l.askingPrice.toFixed(2)}
-                  {sellerClause ? <> · {sellerClause}</> : null}
-                </div>
-                <div className="muted small">
-                  Recent trade (breed):{" "}
-                  {l.recentTradePriceForBreed == null
-                    ? "—"
-                    : `$${l.recentTradePriceForBreed.toFixed(2)}`}{" "}
-                  · New supply: {l.remainingNewSupplyForBreed}
-                </div>
-                {l.sellerTraderId === traderId ? (
-                  <ListingSellerActions
-                    listingId={l.listingId}
-                    sellerTraderId={traderId}
-                    accessToken={accessToken}
-                    onChanged={() => {
-                      void load();
-                      onChanged();
-                    }}
-                  />
-                ) : (
-                  <div className="trading-pets-inline">
-                    {isBidSelected ? (
-                      <span className="muted small" aria-current="true">
-                        Selected — use <strong>Place bid</strong> below
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={() => {
-                          setBidListingId(l.listingId);
-                          setBidAmount(Math.max(1, Math.round(l.askingPrice * 100) / 100));
-                        }}
-                      >
-                        Select for bid
-                      </button>
-                    )}
+                <li
+                  key={l.listingId}
+                  className={
+                    isBidSelected
+                      ? "trading-pets-listing-card trading-pets-listing-card--selected"
+                      : "trading-pets-listing-card"
+                  }
+                >
+                  <div className="trading-pets-listing-card__title">
+                    <strong>{l.breedName}</strong>
+                    <span className="muted small"> · Pet {formatShortPetId(l.petId)}</span>
                   </div>
-                )}
-              </li>
-            );
+                  <div className="trading-pets-listing-card__ask">
+                    <span className="trading-pets-listing-card__ask-label">Asking price</span>
+                    <span className="trading-pets-listing-card__ask-value">${l.askingPrice.toFixed(2)}</span>
+                  </div>
+                  {sellerClause ? <div className="muted small">{sellerClause}</div> : null}
+                  <div className="muted small">
+                    Recent trade (breed):{" "}
+                    {l.recentTradePriceForBreed == null
+                      ? "—"
+                      : `$${l.recentTradePriceForBreed.toFixed(2)}`}{" "}
+                    · New supply remaining: {l.remainingNewSupplyForBreed}
+                  </div>
+                  {l.sellerTraderId === traderId ? (
+                    <ListingSellerActions
+                      listingId={l.listingId}
+                      sellerTraderId={traderId}
+                      accessToken={accessToken}
+                      onChanged={() => {
+                        void load();
+                        onChanged();
+                      }}
+                    />
+                  ) : (
+                    <div className="trading-pets-inline">
+                      {isBidSelected ? (
+                        <span className="muted small" aria-current="true">
+                          Selected — use <strong>Place bid</strong> below
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="secondary-button trading-pets-listing-card__select"
+                          onClick={() => {
+                            setBidListingId(l.listingId);
+                            setBidAmount(Math.max(1, Math.round(l.askingPrice * 100) / 100));
+                          }}
+                        >
+                          Choose pet to bid on
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
             })}
           </ul>
         </div>
@@ -238,15 +263,15 @@ export const SecondaryMarketPanel = ({
             </>
           ) : (
             <p className="muted small">
-              Use <strong>Select for bid</strong> on a listing above, then set your amount here.
+              Use <strong>Choose pet to bid on</strong> on a card above, then set your amount here.
             </p>
           )}
           <p className="muted small">
-            Bids at or above the ask execute immediately; lower bids lock cash until accepted,
-            rejected, withdrawn, or replaced.
+            Bids at or above the ask settle immediately; lower bids lock cash until accepted, rejected, withdrawn, or
+            replaced.
           </p>
         </div>
-        {error ? <p className="trading-pets-error">{error}</p> : null}
+        {error ? <p className="trading-pets-error trading-pets-error--soft">{error}</p> : null}
       </div>
     </section>
   );

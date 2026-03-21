@@ -1,6 +1,8 @@
 using System.Text.Json;
+using MarketService.Application.Pets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Options;
 
 namespace MarketService.Infrastructure.Persistence;
 
@@ -10,7 +12,7 @@ public sealed class MarketDbContextFactory : IDesignTimeDbContextFactory<MarketD
     {
         var optionsBuilder = new DbContextOptionsBuilder<MarketDbContext>();
         optionsBuilder.UseSqlServer(ResolveConnectionString());
-        return new MarketDbContext(optionsBuilder.Options);
+        return new MarketDbContext(optionsBuilder.Options, Options.Create(new TradingPetsOptions()));
     }
 
     private static string ResolveConnectionString()

@@ -5,13 +5,15 @@ alwaysApply: true
 ---
 # specit_trading_test Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-20
+Auto-generated from all feature plans. Last updated: 2026-03-21
 
 ## Active Technologies
 - C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), PowerShell (automation) + ASP.NET Core Minimal APIs, SignalR, EF Core (SqlServer), Auth0 SPA SDK, React Router, Vitest + Testing Library (002-show-user-funds)
 - Existing `DemoAccounts` and `DemoHoldings` tables in the market service SQL-backed EF Core store (002-show-user-funds)
 - C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend) + ASP.NET Core Minimal APIs, EF Core (SqlServer), SignalR, Auth0 SPA SDK + JWT bearer APIs, existing `Trading.*` shared libraries (004-trading-pets)
 - SQL Server via EF Core (new/extended tables for breeds, pets, supply, listings, bids, trades, notifications); optional JSON/file seed for breed dictionary per spec assumption A-002 (004-trading-pets)
+- TypeScript 5.x, React 18 + Vite 6, React Router 6, Auth0 SPA SDK, `@microsoft/signalr`, existing `fetchJson` HTTP helpers (006-pet-trading-ux)
+- N/A (client reads market service APIs; server persistence unchanged) (006-pet-trading-ux)
 
 - C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation) + ASP.NET Core Minimal APIs, SignalR, EF Core (SqlServer), Azure Service Bus SDK, Azure Identity, Auth0 SPA + JWT APIs, OpenTelemetry + Application Insights exporter (001-realtime-trading-platform)
 
@@ -32,10 +34,10 @@ npm test; npm run lint
 C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation): Follow standard conventions
 
 ## Recent Changes
+- 006-pet-trading-ux: Added TypeScript 5.x, React 18 + Vite 6, React Router 6, Auth0 SPA SDK, `@microsoft/signalr`, existing `fetchJson` HTTP helpers
 - 004-trading-pets: Added C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend) + ASP.NET Core Minimal APIs, EF Core (SqlServer), SignalR, Auth0 SPA SDK + JWT bearer APIs, existing `Trading.*` shared libraries
 - 002-show-user-funds: Added C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), PowerShell (automation) + ASP.NET Core Minimal APIs, SignalR, EF Core (SqlServer), Auth0 SPA SDK, React Router, Vitest + Testing Library
 
-- 001-realtime-trading-platform: Added C# 12 / .NET 8 (backend), TypeScript 5.x / React 18 (frontend), Bicep (IaC), PowerShell (automation) + ASP.NET Core Minimal APIs, SignalR, EF Core (SqlServer), Azure Service Bus SDK, Azure Identity, Auth0 SPA + JWT APIs, OpenTelemetry + Application Insights exporter
 
 <!-- MANUAL ADDITIONS START -->
 ## Implementation rules

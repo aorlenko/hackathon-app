@@ -1,15 +1,22 @@
 using MarketService.Application.Abstractions;
 using MarketService.Application.Accounts;
+using MarketService.Application.Pets;
 using MarketService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace MarketService.Infrastructure.Persistence;
 
 public sealed class MarketDbContext : DbContext, IMarketDataStore
 {
-    public MarketDbContext(DbContextOptions<MarketDbContext> options)
+    private readonly TradingPetsOptions _tradingPets;
+
+    public MarketDbContext(
+        DbContextOptions<MarketDbContext> options,
+        IOptions<TradingPetsOptions> tradingPetsOptions)
         : base(options)
     {
+        _tradingPets = tradingPetsOptions.Value;
     }
 
     public DbSet<Item> Items => Set<Item>();
@@ -87,7 +94,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
     public async Task<DemoAccount> EnsureDemoAccountAsync(string userId, string? displayName, string? email, CancellationToken cancellationToken = default)
     {
         var normalizedDisplayName = MarketUserIdentityDefaults.NormalizeDisplayName(displayName, userId);
-        var normalizedEmail = MarketUserIdentityDefaults.NormalizeEmail(email, userId);
+        var emailForStorage = MarketUserIdentityDefaults.NormalizeEmail(email, userId);
 
         var existing = await Accounts
             .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken)
@@ -99,7 +106,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             {
                 UserId = userId,
                 DisplayName = normalizedDisplayName,
-                Email = normalizedEmail
+                Email = emailForStorage
             };
 
             Accounts.Add(existing);
@@ -107,7 +114,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             await EnsureUserWalletTraderAsync(
                     userId,
                     normalizedDisplayName,
-                    MarketSeedData.AutoProvisionedCashAvailable,
+                    _tradingPets.InitialTraderCash,
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -120,10 +127,16 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
                 changed = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(normalizedEmail) && !string.Equals(existing.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+            // Only change email when the caller supplied one. Otherwise a JWT without an email claim
+            // would synthesize trader-*@demo.local and overwrite a real address from bootstrap.
+            if (!string.IsNullOrWhiteSpace(email))
             {
-                existing.Email = normalizedEmail;
-                changed = true;
+                var nextEmail = MarketUserIdentityDefaults.NormalizeEmail(email, userId);
+                if (!string.Equals(existing.Email, nextEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    existing.Email = nextEmail;
+                    changed = true;
+                }
             }
 
             if (changed)
@@ -134,7 +147,7 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
             await EnsureUserWalletTraderAsync(
                     userId,
                     existing.DisplayName,
-                    MarketSeedData.AutoProvisionedCashAvailable,
+                    _tradingPets.InitialTraderCash,
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -178,6 +191,13 @@ public sealed class MarketDbContext : DbContext, IMarketDataStore
         var row = await Traders.FirstOrDefaultAsync(t => t.ExternalUserId == userId, cancellationToken).ConfigureAwait(false);
         if (row is not null)
         {
+            var next = string.IsNullOrWhiteSpace(displayName) ? row.DisplayName : displayName.Trim();
+            if (next.Length > 0 && !string.Equals(row.DisplayName, next, StringComparison.Ordinal))
+            {
+                row.DisplayName = next;
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             return;
         }
 

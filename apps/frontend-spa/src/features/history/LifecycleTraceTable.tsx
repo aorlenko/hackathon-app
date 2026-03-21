@@ -11,6 +11,7 @@ interface LifecycleTraceTableProps {
   identities: Map<string, AccountIdentity>;
   currentUserId?: string | null;
   currentUserEmail?: string | null;
+  currentUserDisplayName?: string | null;
 }
 
 const settlementByTradeId = (settlements: SettlementRecord[]) =>
@@ -22,6 +23,7 @@ export const LifecycleTraceTable = ({
   identities,
   currentUserId,
   currentUserEmail,
+  currentUserDisplayName,
 }: LifecycleTraceTableProps) => {
   const settlementMap = settlementByTradeId(settlements);
 
@@ -59,6 +61,7 @@ export const LifecycleTraceTable = ({
                     {formatParticipantLabel(trade.buyerUserId, identities, {
                       currentUserId,
                       currentUserEmail,
+                      currentUserDisplayName,
                       fallbackLabel: "Buyer",
                     })}
                   </td>
@@ -66,6 +69,7 @@ export const LifecycleTraceTable = ({
                     {formatParticipantLabel(trade.sellerUserId, identities, {
                       currentUserId,
                       currentUserEmail,
+                      currentUserDisplayName,
                       fallbackLabel: "Seller",
                     })}
                   </td>

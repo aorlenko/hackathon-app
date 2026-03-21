@@ -27,7 +27,7 @@ public sealed class GetCurrentAccountHandler
 
         return new AccountSnapshotDto(
             account.UserId,
-            account.DisplayName,
+            AccountPublicDisplayName.ForDemoAccount(account.DisplayName, account.Email),
             account.Email,
             account.CashAvailable);
     }

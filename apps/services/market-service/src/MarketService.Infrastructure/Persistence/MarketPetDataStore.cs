@@ -1,4 +1,5 @@
 using MarketService.Application.Abstractions;
+using MarketService.Application.Accounts;
 using MarketService.Application.Pets;
 using MarketService.Application.Realtime;
 using MarketService.Domain.Entities;
@@ -81,7 +82,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             Id = Guid.NewGuid(),
             DisplayName = normalizedName,
             ExternalUserId = externalUserSub,
-            AvailableCash = MarketSeedData.AutoProvisionedCashAvailable,
+            AvailableCash = _options.InitialTraderCash,
             LockedCash = 0,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -243,9 +244,31 @@ public sealed class MarketPetDataStore : IMarketPetStore
                 MapBidStatus(b.Status)))
             .ToList();
 
+        var snapshotDisplayName = trader.DisplayName;
+        if (!string.IsNullOrWhiteSpace(trader.ExternalUserId))
+        {
+            var acct = await _db.Accounts
+                .AsNoTracking()
+                .Where(a => a.UserId == trader.ExternalUserId)
+                .Select(a => new { a.DisplayName, a.Email })
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (acct is not null)
+            {
+                snapshotDisplayName = AccountPublicDisplayName.ForLinkedExternalUser(
+                    trader.DisplayName,
+                    acct.DisplayName,
+                    acct.Email);
+            }
+        }
+        else
+        {
+            snapshotDisplayName = AccountPublicDisplayName.ForUnlinkedTrader(trader.DisplayName);
+        }
+
         return new TraderSnapshotRow(
             trader.Id,
-            trader.DisplayName,
+            snapshotDisplayName,
             trader.AvailableCash,
             trader.LockedCash,
             portfolioTotal,
@@ -310,11 +333,14 @@ public sealed class MarketPetDataStore : IMarketPetStore
                         sellerEmail = acctEmail;
                     }
 
-                    var acctName = acct.DisplayName.Trim();
-                    if (traderDisplay.Contains('|', StringComparison.Ordinal) && acctName.Length > 0)
-                    {
-                        sellerDisplayName = acctName;
-                    }
+                    sellerDisplayName = AccountPublicDisplayName.ForLinkedExternalUser(
+                        traderDisplay,
+                        acct.DisplayName,
+                        acct.Email);
+                }
+                else
+                {
+                    sellerDisplayName = AccountPublicDisplayName.ForUnlinkedTrader(traderDisplay);
                 }
 
                 return new MarketListingRow(
@@ -664,6 +690,30 @@ public sealed class MarketPetDataStore : IMarketPetStore
     public async Task<IReadOnlyList<LeaderboardRow>> GetLeaderboardAsync(CancellationToken cancellationToken = default)
     {
         var traders = await _db.Traders.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+        var leaderboardExtIds = traders
+            .Select(tr => tr.ExternalUserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+        Dictionary<string, (string DisplayName, string Email)> leaderboardAccounts;
+        if (leaderboardExtIds.Count == 0)
+        {
+            leaderboardAccounts = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
+        }
+        else
+        {
+            var acctRows = await _db.Accounts
+                .AsNoTracking()
+                .Where(a => leaderboardExtIds.Contains(a.UserId))
+                .Select(a => new { a.UserId, a.DisplayName, a.Email })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            leaderboardAccounts = acctRows.ToDictionary(
+                x => x.UserId,
+                x => (x.DisplayName, x.Email),
+                StringComparer.Ordinal);
+        }
+
         var pets = await _db.Pets
             .AsNoTracking()
             .Include(p => p.Breed)
@@ -689,7 +739,12 @@ public sealed class MarketPetDataStore : IMarketPetStore
                      .OrderByDescending(x => x.total)
                      .ThenBy(x => x.tr.DisplayName))
         {
-            rows.Add(new LeaderboardRow(t.tr.Id, t.tr.DisplayName, t.total, rank++));
+            var label = string.IsNullOrWhiteSpace(t.tr.ExternalUserId)
+                ? AccountPublicDisplayName.ForUnlinkedTrader(t.tr.DisplayName)
+                : leaderboardAccounts.TryGetValue(t.tr.ExternalUserId!, out var acct)
+                    ? AccountPublicDisplayName.ForLinkedExternalUser(t.tr.DisplayName, acct.DisplayName, acct.Email)
+                    : AccountPublicDisplayName.ForUnlinkedTrader(t.tr.DisplayName);
+            rows.Add(new LeaderboardRow(t.tr.Id, label, t.total, rank++));
         }
 
         return rows;
@@ -701,11 +756,86 @@ public sealed class MarketPetDataStore : IMarketPetStore
         CancellationToken cancellationToken = default)
     {
         var take = Math.Clamp(limit, 1, 200);
-        return await _db.Notifications
+        var raw = await _db.Notifications
             .AsNoTracking()
             .Where(n => n.TraderId == traderId)
             .OrderByDescending(n => n.CreatedAt)
             .Take(take)
+            .Select(n => new
+            {
+                n.Id,
+                n.Type,
+                n.CreatedAt,
+                n.PetId,
+                n.PetName,
+                n.Amount,
+                n.CounterpartyTraderId
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (raw.Count == 0)
+        {
+            return [];
+        }
+
+        var counterpartyIds = raw.Select(r => r.CounterpartyTraderId).Distinct().ToList();
+        var counterpartyTraders = await _db.Traders
+            .AsNoTracking()
+            .Where(t => counterpartyIds.Contains(t.Id))
+            .Select(t => new { t.Id, t.DisplayName, t.ExternalUserId })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var counterpartyExtIds = counterpartyTraders
+            .Select(t => t.ExternalUserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+        Dictionary<string, (string DisplayName, string Email)> counterpartyAccounts;
+        if (counterpartyExtIds.Count == 0)
+        {
+            counterpartyAccounts = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
+        }
+        else
+        {
+            var rows = await _db.Accounts
+                .AsNoTracking()
+                .Where(a => counterpartyExtIds.Contains(a.UserId))
+                .Select(a => new { a.UserId, a.DisplayName, a.Email })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            counterpartyAccounts = rows.ToDictionary(
+                x => x.UserId,
+                x => (x.DisplayName, x.Email),
+                StringComparer.Ordinal);
+        }
+
+        var idToTrader = counterpartyTraders.ToDictionary(x => x.Id);
+        var labels = new Dictionary<Guid, string>();
+        foreach (var id in counterpartyIds)
+        {
+            if (!idToTrader.TryGetValue(id, out var ct))
+            {
+                labels[id] = "Trader";
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(ct.ExternalUserId))
+            {
+                labels[id] = AccountPublicDisplayName.ForUnlinkedTrader(ct.DisplayName);
+                continue;
+            }
+
+            if (!counterpartyAccounts.TryGetValue(ct.ExternalUserId!, out var acct))
+            {
+                labels[id] = AccountPublicDisplayName.ForUnlinkedTrader(ct.DisplayName);
+                continue;
+            }
+
+            labels[id] = AccountPublicDisplayName.ForLinkedExternalUser(ct.DisplayName, acct.DisplayName, acct.Email);
+        }
+
+        return raw
             .Select(n => new NotificationRow(
                 n.Id,
                 n.Type.ToString(),
@@ -714,9 +844,8 @@ public sealed class MarketPetDataStore : IMarketPetStore
                 n.PetName,
                 n.Amount,
                 n.CounterpartyTraderId,
-                n.CounterpartyDisplayName))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+                labels[n.CounterpartyTraderId]))
+            .ToList();
     }
 
     public async Task<IReadOnlyList<Guid>> RunValuationTickAsync(CancellationToken cancellationToken = default)
@@ -826,6 +955,25 @@ public sealed class MarketPetDataStore : IMarketPetStore
             _ => status.ToString()
         };
 
+    private async Task<string> GetPublicTraderLabelAsync(Trader trader, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(trader.ExternalUserId))
+        {
+            return AccountPublicDisplayName.ForUnlinkedTrader(trader.DisplayName);
+        }
+
+        var acct = await _db.Accounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.UserId == trader.ExternalUserId, cancellationToken)
+            .ConfigureAwait(false);
+        if (acct is null)
+        {
+            return AccountPublicDisplayName.ForUnlinkedTrader(trader.DisplayName);
+        }
+
+        return AccountPublicDisplayName.ForLinkedExternalUser(trader.DisplayName, acct.DisplayName, acct.Email);
+    }
+
     private async Task<IReadOnlyList<Trader>> SupersedeActivePendingBidsWithNotificationsAsync(
         Listing listing,
         CancellationToken cancellationToken)
@@ -836,6 +984,9 @@ public sealed class MarketPetDataStore : IMarketPetStore
             .Where(b => b.ListingId == listing.Id && b.Status == BidStatus.Active)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var sellerLabel = listing.Seller is not null
+            ? await GetPublicTraderLabelAsync(listing.Seller, cancellationToken).ConfigureAwait(false)
+            : "Seller";
         foreach (var b in active)
         {
             await ReleaseBidLockAsync(b, cancellationToken).ConfigureAwait(false);
@@ -850,7 +1001,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
                     PetDisplayName(listing.Pet),
                     b.Amount,
                     listing.SellerTraderId,
-                    listing.Seller?.DisplayName ?? "Seller",
+                    sellerLabel,
                     b.Id.ToString(),
                     cancellationToken).ConfigureAwait(false);
             }
@@ -882,6 +1033,9 @@ public sealed class MarketPetDataStore : IMarketPetStore
             .Where(b => b.ListingId == listing.Id && b.Status == BidStatus.Active)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var sellerLabel = listing.Seller is not null
+            ? await GetPublicTraderLabelAsync(listing.Seller, cancellationToken).ConfigureAwait(false)
+            : "Seller";
         foreach (var bid in active)
         {
             await ReleaseBidLockAsync(bid, cancellationToken).ConfigureAwait(false);
@@ -898,7 +1052,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
                         PetDisplayName(listing.Pet),
                         bid.Amount,
                         listing.Seller.Id,
-                        listing.Seller.DisplayName,
+                        sellerLabel,
                         listing.Id.ToString(),
                         cancellationToken).ConfigureAwait(false);
                 }
@@ -950,25 +1104,31 @@ public sealed class MarketPetDataStore : IMarketPetStore
         return $"{pet.Breed.Name} ({shortId})";
     }
 
-    private Task AddBidReceivedNotificationAsync(
+    private async Task AddBidReceivedNotificationAsync(
         Listing listing,
         Bid bid,
         Trader buyer,
-        CancellationToken cancellationToken) =>
-        AddNotificationAsync(
+        CancellationToken cancellationToken)
+    {
+        var buyerLabel = await GetPublicTraderLabelAsync(buyer, cancellationToken).ConfigureAwait(false);
+        await AddNotificationAsync(
             listing.SellerTraderId,
             NotificationType.BidReceived,
             listing.PetId,
             PetDisplayName(listing.Pet),
             bid.Amount,
             bid.BuyerTraderId,
-            buyer.DisplayName,
+            buyerLabel,
             bid.Id.ToString(),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+    }
 
     private async Task AddOutbidNotificationAsync(Bid prior, Listing listing, CancellationToken cancellationToken)
     {
         var buyer = prior.Buyer ?? await _db.Traders.FirstAsync(t => t.Id == prior.BuyerTraderId, cancellationToken).ConfigureAwait(false);
+        var sellerLabel = listing.Seller is not null
+            ? await GetPublicTraderLabelAsync(listing.Seller, cancellationToken).ConfigureAwait(false)
+            : "Seller";
         await AddNotificationAsync(
             buyer.Id,
             NotificationType.Outbid,
@@ -976,7 +1136,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             PetDisplayName(listing.Pet),
             prior.Amount,
             listing.SellerTraderId,
-            listing.Seller?.DisplayName ?? "Seller",
+            sellerLabel,
             prior.Id.ToString(),
             cancellationToken).ConfigureAwait(false);
     }
@@ -988,6 +1148,15 @@ public sealed class MarketPetDataStore : IMarketPetStore
             return;
         }
 
+        var buyer = bid.Buyer ?? await _db.Traders
+            .FirstOrDefaultAsync(t => t.Id == bid.BuyerTraderId, cancellationToken)
+            .ConfigureAwait(false);
+        if (buyer is null)
+        {
+            return;
+        }
+
+        var buyerLabel = await GetPublicTraderLabelAsync(buyer, cancellationToken).ConfigureAwait(false);
         await AddNotificationAsync(
             bid.Listing.SellerTraderId,
             NotificationType.BidWithdrawn,
@@ -995,22 +1164,27 @@ public sealed class MarketPetDataStore : IMarketPetStore
             PetDisplayName(bid.Listing.Pet),
             bid.Amount,
             bid.BuyerTraderId,
-            bid.Buyer?.DisplayName ?? "Buyer",
+            buyerLabel,
             bid.Id.ToString(),
             cancellationToken).ConfigureAwait(false);
     }
 
-    private Task AddBidRejectedNotificationAsync(Listing listing, Bid bid, CancellationToken cancellationToken) =>
-        AddNotificationAsync(
+    private async Task AddBidRejectedNotificationAsync(Listing listing, Bid bid, CancellationToken cancellationToken)
+    {
+        var sellerLabel = listing.Seller is not null
+            ? await GetPublicTraderLabelAsync(listing.Seller, cancellationToken).ConfigureAwait(false)
+            : "Seller";
+        await AddNotificationAsync(
             bid.BuyerTraderId,
             NotificationType.BidRejected,
             listing.PetId,
             PetDisplayName(listing.Pet),
             bid.Amount,
             listing.SellerTraderId,
-            listing.Seller?.DisplayName ?? "Seller",
+            sellerLabel,
             bid.Id.ToString(),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+    }
 
     private async Task AddTradeAcceptedNotificationsAsync(
         Listing listing,
@@ -1019,6 +1193,8 @@ public sealed class MarketPetDataStore : IMarketPetStore
         Trader seller,
         CancellationToken cancellationToken)
     {
+        var buyerLabel = await GetPublicTraderLabelAsync(buyer, cancellationToken).ConfigureAwait(false);
+        var sellerLabel = await GetPublicTraderLabelAsync(seller, cancellationToken).ConfigureAwait(false);
         await AddNotificationAsync(
             seller.Id,
             NotificationType.BidAccepted,
@@ -1026,7 +1202,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             PetDisplayName(listing.Pet),
             trade.Price,
             buyer.Id,
-            buyer.DisplayName,
+            buyerLabel,
             trade.Id.ToString(),
             cancellationToken).ConfigureAwait(false);
         await AddNotificationAsync(
@@ -1036,7 +1212,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             PetDisplayName(listing.Pet),
             trade.Price,
             seller.Id,
-            seller.DisplayName,
+            sellerLabel,
             trade.Id.ToString(),
             cancellationToken).ConfigureAwait(false);
     }
@@ -1048,6 +1224,8 @@ public sealed class MarketPetDataStore : IMarketPetStore
         Trader seller,
         CancellationToken cancellationToken)
     {
+        var buyerLabel = await GetPublicTraderLabelAsync(buyer, cancellationToken).ConfigureAwait(false);
+        var sellerLabel = await GetPublicTraderLabelAsync(seller, cancellationToken).ConfigureAwait(false);
         await AddNotificationAsync(
             seller.Id,
             NotificationType.TradeCompleted,
@@ -1055,7 +1233,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             PetDisplayName(listing.Pet),
             trade.Price,
             buyer.Id,
-            buyer.DisplayName,
+            buyerLabel,
             trade.Id.ToString(),
             cancellationToken).ConfigureAwait(false);
         await AddNotificationAsync(
@@ -1065,7 +1243,7 @@ public sealed class MarketPetDataStore : IMarketPetStore
             PetDisplayName(listing.Pet),
             trade.Price,
             seller.Id,
-            seller.DisplayName,
+            sellerLabel,
             trade.Id.ToString(),
             cancellationToken).ConfigureAwait(false);
     }

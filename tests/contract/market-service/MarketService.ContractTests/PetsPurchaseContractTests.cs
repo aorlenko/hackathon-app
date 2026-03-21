@@ -60,5 +60,6 @@ public sealed class PetsPurchaseContractTests
             harness.MarketStore,
             NullLogger<MarketPetDataStore>.Instance,
             Options.Create(TradingPetsOptions.CreateForContractTestHarness()),
+            null,
             null);
 }

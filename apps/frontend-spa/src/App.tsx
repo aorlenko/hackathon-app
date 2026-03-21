@@ -13,7 +13,7 @@ const RootIndex = () => {
       </section>
     );
   }
-  return <Navigate to="/pets/workspace" replace />;
+  return <Navigate to="/pets/primary-supply" replace />;
 };
 import { SettlementHistoryPage } from "./features/history/SettlementHistoryPage";
 import { TradeHistoryPage } from "./features/history/TradeHistoryPage";
@@ -24,7 +24,8 @@ import {
   MyPetsPage,
   PetAnalysisPage,
   PetTraderAuthSummaryMetrics,
-  TraderWorkspacePage,
+  PrimarySupplyMarketPage,
+  ResaleMarketplacePage,
 } from "./features/trading-pets";
 
 export const Header = () => {
@@ -68,7 +69,8 @@ export const Header = () => {
         </div>
       </div>
       <nav className="nav-links" aria-label="Primary">
-        <NavLink to="/pets/workspace">Pet trading</NavLink>
+        <NavLink to="/pets/primary-supply">Primary supply market</NavLink>
+        <NavLink to="/pets/resale">Resale marketplace</NavLink>
         <NavLink to="/pets/my-pets">My pets</NavLink>
         <NavLink to="/pets/market">Pets for sale</NavLink>
         <NavLink to="/pets/leaderboard">Leaderboard</NavLink>
@@ -93,14 +95,16 @@ export const App = () => {
               element={<SettlementHistoryPage />}
             />
             <Route element={<MyPetTraderProvider />}>
-              <Route path="/pets/workspace" element={<TraderWorkspacePage />} />
+              <Route path="/pets/workspace" element={<Navigate to="/pets/primary-supply" replace />} />
+              <Route path="/pets/primary-supply" element={<PrimarySupplyMarketPage />} />
+              <Route path="/pets/resale" element={<ResaleMarketplacePage />} />
               <Route path="/pets/my-pets" element={<MyPetsPage />} />
               <Route path="/pets/market" element={<MarketListingsPage />} />
               <Route path="/pets/leaderboard" element={<LeaderboardPage />} />
               <Route path="/pets/analysis/:petId" element={<PetAnalysisPage />} />
             </Route>
           </Route>
-          <Route path="*" element={<Navigate to="/pets/workspace" replace />} />
+          <Route path="*" element={<Navigate to="/pets/primary-supply" replace />} />
         </Routes>
       </main>
     </div>

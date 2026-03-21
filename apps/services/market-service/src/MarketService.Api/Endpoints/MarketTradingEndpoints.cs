@@ -17,7 +17,34 @@ public static class MarketTradingEndpoints
         group.MapPost("/listings/{listingId:guid}/accept", AcceptBidAsync);
         group.MapPost("/listings/{listingId:guid}/reject", RejectBidAsync);
         group.MapPost("/bids/{bidId:guid}/withdraw", WithdrawBidAsync);
+        group.MapGet("/trades/me", GetMyResaleTradesAsync);
         return group;
+    }
+
+    private static async Task<IResult> GetMyResaleTradesAsync(
+        HttpContext httpContext,
+        IMarketPetStore store,
+        CancellationToken cancellationToken)
+    {
+        if (CurrentUserProfileReader.Read(httpContext.User) is not { } profile)
+        {
+            return Results.Unauthorized();
+        }
+
+        var rows = await store
+            .GetResaleTradesForExternalUserAsync(profile.UserId, cancellationToken)
+            .ConfigureAwait(false);
+        var payload = rows.Select(r => new
+        {
+            tradeId = r.TradeId,
+            symbol = r.Symbol,
+            price = r.Price,
+            quantity = r.Quantity,
+            executedAtUtc = r.ExecutedAt,
+            buyerUserId = r.BuyerUserId,
+            sellerUserId = r.SellerUserId
+        });
+        return Results.Ok(payload);
     }
 
     private static async Task<IResult> GetListingsAsync(

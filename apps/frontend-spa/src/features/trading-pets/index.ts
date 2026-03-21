@@ -1,4 +1,5 @@
-export { TraderWorkspacePage } from "./TraderWorkspacePage";
+export { PrimarySupplyMarketPage } from "./PrimarySupplyMarketPage";
+export { ResaleMarketplacePage } from "./ResaleMarketplacePage";
 export { MyPetsPage } from "./MyPetsPage";
 export { MarketListingsPage } from "./MarketListingsPage";
 export { PetAnalysisPage } from "./PetAnalysisPage";

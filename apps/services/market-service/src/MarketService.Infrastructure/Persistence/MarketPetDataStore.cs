@@ -6,6 +6,7 @@ using MarketService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Trading.Contracts.Events;
 using Trading.Contracts.Http;
 
 namespace MarketService.Infrastructure.Persistence;
@@ -16,17 +17,20 @@ public sealed class MarketPetDataStore : IMarketPetStore
     private readonly ILogger<MarketPetDataStore> _logger;
     private readonly TradingPetsOptions _options;
     private readonly IMarketRealtimeNotifier? _fundsRealtime;
+    private readonly ILifecycleEventPublisher? _lifecycle;
 
     public MarketPetDataStore(
         MarketDbContext db,
         ILogger<MarketPetDataStore> logger,
         IOptions<TradingPetsOptions> options,
-        IMarketRealtimeNotifier? fundsRealtime = null)
+        IMarketRealtimeNotifier? fundsRealtime = null,
+        ILifecycleEventPublisher? lifecycle = null)
     {
         _db = db;
         _logger = logger;
         _options = options.Value;
         _fundsRealtime = fundsRealtime;
+        _lifecycle = lifecycle;
     }
 
     public async Task<bool> IsAuthorizedTraderCommandAsync(
@@ -474,6 +478,16 @@ public sealed class MarketPetDataStore : IMarketPetStore
                 await PublishFundsLinkedAsync(prior, cancellationToken).ConfigureAwait(false);
             }
 
+            await PublishPeerTradeOrderMatchedAsync(
+                trade.TradeId,
+                trade.PetId,
+                PeerTradeSymbol(listing.Pet),
+                trade.Price,
+                trade.ExecutedAt,
+                buyer.ExternalUserId,
+                listing.Seller.ExternalUserId,
+                cancellationToken).ConfigureAwait(false);
+
             return new CrossTradePlaceResult(trade);
         }
 
@@ -598,7 +612,23 @@ public sealed class MarketPetDataStore : IMarketPetStore
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         await PublishFundsLinkedAsync(seller, cancellationToken).ConfigureAwait(false);
-        return new TradeResultRow(trade.Id, trade.PetId, trade.BuyerTraderId, trade.SellerTraderId, trade.Price);
+        await PublishPeerTradeOrderMatchedAsync(
+            trade.Id,
+            trade.PetId,
+            PeerTradeSymbol(listing.Pet),
+            trade.Price,
+            trade.ExecutedAt,
+            buyer.ExternalUserId,
+            seller.ExternalUserId,
+            cancellationToken).ConfigureAwait(false);
+
+        return new TradeResultRow(
+            trade.Id,
+            trade.PetId,
+            trade.BuyerTraderId,
+            trade.SellerTraderId,
+            trade.Price,
+            trade.ExecutedAt);
     }
 
     public async Task<bool> RejectBidAsync(Guid traderId, Guid listingId, CancellationToken cancellationToken = default)
@@ -743,6 +773,50 @@ public sealed class MarketPetDataStore : IMarketPetStore
         }
 
         return rows;
+    }
+
+    public async Task<IReadOnlyList<PetResaleTradeHistoryRow>> GetResaleTradesForExternalUserAsync(
+        string externalUserSub,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(externalUserSub))
+        {
+            return [];
+        }
+
+        const int maxRows = 200;
+        var trades = await _db.Trades
+            .AsNoTracking()
+            .Include(t => t.Buyer)
+            .Include(t => t.Seller)
+            .Include(t => t.Pet!)
+            .ThenInclude(p => p.Breed)
+            .Where(t =>
+                t.Buyer != null
+                && t.Seller != null
+                && (t.Buyer.ExternalUserId == externalUserSub || t.Seller.ExternalUserId == externalUserSub))
+            .OrderByDescending(t => t.ExecutedAt)
+            .Take(maxRows)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var list = new List<PetResaleTradeHistoryRow>(trades.Count);
+        foreach (var t in trades)
+        {
+            var breedName = t.Pet?.Breed?.Name;
+            var symbol = string.IsNullOrWhiteSpace(breedName) ? "PET_RESALE" : $"PET/{breedName}";
+            list.Add(
+                new PetResaleTradeHistoryRow(
+                    t.Id,
+                    symbol,
+                    t.Price,
+                    1,
+                    t.ExecutedAt,
+                    t.Buyer!.ExternalUserId ?? string.Empty,
+                    t.Seller!.ExternalUserId ?? string.Empty));
+        }
+
+        return list;
     }
 
     public async Task<IReadOnlyList<NotificationRow>> GetNotificationsAsync(
@@ -1085,7 +1159,79 @@ public sealed class MarketPetDataStore : IMarketPetStore
         };
         _db.Trades.Add(trade);
         await AddCrossTradeNotificationsAsync(listing, trade, buyer, seller, cancellationToken).ConfigureAwait(false);
-        return new TradeResultRow(trade.Id, trade.PetId, trade.BuyerTraderId, trade.SellerTraderId, trade.Price);
+        return new TradeResultRow(
+            trade.Id,
+            trade.PetId,
+            trade.BuyerTraderId,
+            trade.SellerTraderId,
+            trade.Price,
+            trade.ExecutedAt);
+    }
+
+    private static string PeerTradeSymbol(Pet? pet)
+    {
+        var breed = pet?.Breed?.Name;
+        return string.IsNullOrWhiteSpace(breed) ? "PET_RESALE" : $"PET/{breed.Trim()}";
+    }
+
+    private async Task PublishPeerTradeOrderMatchedAsync(
+        Guid tradeId,
+        Guid petId,
+        string symbol,
+        decimal price,
+        DateTimeOffset executedAt,
+        string? buyerUserId,
+        string? sellerUserId,
+        CancellationToken cancellationToken)
+    {
+        if (_lifecycle is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(buyerUserId) || string.IsNullOrWhiteSpace(sellerUserId))
+        {
+            _logger.LogWarning(
+                "Peer trade {TradeId} committed but lifecycle event was skipped (buyer or seller has no ExternalUserId).",
+                tradeId);
+            return;
+        }
+
+        var correlationId = tradeId.ToString("N");
+        var buyOrderId = DerivePeerSyntheticOrderId(tradeId, 0x01);
+        var sellOrderId = DerivePeerSyntheticOrderId(tradeId, 0x02);
+        var evt = new OrderMatched(
+            Guid.NewGuid(),
+            executedAt,
+            correlationId,
+            "market-service",
+            tradeId,
+            buyOrderId,
+            sellOrderId,
+            buyerUserId.Trim(),
+            sellerUserId.Trim(),
+            petId,
+            symbol,
+            price,
+            1,
+            executedAt);
+
+        try
+        {
+            await _lifecycle.PublishAsync(evt, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish OrderMatched for peer trade {TradeId}.", tradeId);
+        }
+    }
+
+    private static Guid DerivePeerSyntheticOrderId(Guid tradeId, byte tag)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        tradeId.TryWriteBytes(bytes);
+        bytes[15] ^= tag;
+        return new Guid(bytes);
     }
 
     private static string PetDisplayName(Pet? pet)

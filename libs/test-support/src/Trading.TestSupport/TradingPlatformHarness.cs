@@ -114,6 +114,7 @@ public sealed class TradingPlatformHarness
             MarketStore,
             NullLogger<MarketPetDataStore>.Instance,
             Options.Create(options ?? TradingPetsOptions.CreateForContractTestHarness()),
+            null,
             null);
 
     public static ClaimsPrincipal CreatePrincipal(string userId, string? displayName = null, string? email = null)

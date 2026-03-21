@@ -19,6 +19,7 @@ public sealed class PetsAnalysisAndLeaderboardContractTests
             harness.MarketStore,
             NullLogger<MarketPetDataStore>.Instance,
             Options.Create(TradingPetsOptions.CreateForContractTestHarness()),
+            null,
             null);
 
         await store.PurchasePetsAsync(TraderOne, PoodleBreedId, 1);
@@ -39,6 +40,7 @@ public sealed class PetsAnalysisAndLeaderboardContractTests
             harness.MarketStore,
             NullLogger<MarketPetDataStore>.Instance,
             Options.Create(TradingPetsOptions.CreateForContractTestHarness()),
+            null,
             null);
 
         await store.PurchasePetsAsync(TraderOne, PoodleBreedId, 1);

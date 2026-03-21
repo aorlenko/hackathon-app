@@ -16,6 +16,7 @@ public sealed class PetsBreedsContractTests
             harness.MarketStore,
             NullLogger<MarketPetDataStore>.Instance,
             Options.Create(TradingPetsOptions.CreateForContractTestHarness()),
+            null,
             null);
 
         var rows = await store.GetBreedsWithSupplyAsync();

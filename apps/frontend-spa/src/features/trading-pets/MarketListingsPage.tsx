@@ -45,7 +45,15 @@ export const MarketListingsPage = () => {
       <ul className="trading-pets-list trading-pets-list--market">
         {rows.length === 0 && !error ? (
           <li className="trading-pets-empty">
-            No pets for sale yet. Buy a pet on Pet trading, then post one for sale from there.
+            No pets for sale yet. Buy a pet on{" "}
+            <Link to="/pets/primary-supply" className="trading-pets-text-link">
+              Primary supply market
+            </Link>
+            , then post one for sale from the{" "}
+            <Link to="/pets/resale" className="trading-pets-text-link">
+              Resale marketplace
+            </Link>
+            .
           </li>
         ) : null}
         {rows.map((l) => {

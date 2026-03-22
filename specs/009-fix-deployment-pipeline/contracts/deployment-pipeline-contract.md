@@ -13,10 +13,10 @@ Source: `.github/workflows/deploy-hackathon.yml` (job `deploy` on `ubuntu-latest
 | `environmentName` | string | yes | `dev` | Bicep param `environmentName` |
 | `location` | string | yes | `eastus` | RG creation + Bicep `location` (via parameters file / overrides) |
 | `resourceGroupName` | string | yes | `rg-trading-hackathon-dev` | `az group`, `az deployment group` |
-| `frontendImage` | string | no | `""` | Bicep `frontendImage` when non-empty |
-| `marketServiceImage` | string | no | `""` | Bicep `marketServiceImage` |
-| `tradeServiceImage` | string | no | `""` | Bicep `tradeServiceImage` |
-| `settlementServiceImage` | string | no | `""` | Bicep `settlementServiceImage` |
+| `frontendImage` | string | no | `""` | Bicep `frontendImage` when non-empty; otherwise workflow resolves `${ACR_LOGIN_SERVER}/frontend-spa:latest` |
+| `marketServiceImage` | string | no | `""` | Bicep `marketServiceImage`; otherwise workflow resolves `${ACR_LOGIN_SERVER}/market-service:latest` |
+| `tradeServiceImage` | string | no | `""` | Bicep `tradeServiceImage`; otherwise workflow resolves `${ACR_LOGIN_SERVER}/trade-service:latest` |
+| `settlementServiceImage` | string | no | `""` | Bicep `settlementServiceImage`; otherwise workflow resolves `${ACR_LOGIN_SERVER}/settlement-service:latest` |
 | `runSmoke` | boolean | yes | `true` | Gates smoke step |
 
 Naming contract for Container Apps (endpoint resolution step) must stay aligned with Bicep. **Azure limits app names to 32 characters**, so the template uses short prefixes:
@@ -62,6 +62,7 @@ Job `deploy` uses `environment: hackathon`. Secrets and variables below are refe
 | `AUTH0_DOMAIN` | `env.AUTH0_DOMAIN` |
 | `AUTH0_AUDIENCE` | `env.AUTH0_AUDIENCE` |
 | `AUTH0_CLIENT_ID` | `env.AUTH0_CLIENT_ID` |
+| `ACR_LOGIN_SERVER` | Auto-resolve app image tags in `deploy-hackathon.yml` when image inputs are blank |
 
 ---
 

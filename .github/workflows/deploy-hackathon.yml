@@ -54,6 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: hackathon
     env:
+      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
       SQL_ADMIN_LOGIN: ${{ vars.SQL_ADMIN_LOGIN }}
       SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
       AUTH0_DOMAIN: ${{ vars.AUTH0_DOMAIN }}
@@ -78,6 +79,34 @@ jobs:
         shell: pwsh
         run: az group create --name "${{ inputs.resourceGroupName }}" --location "${{ inputs.location }}"
 
+      - name: Resolve deployment image references
+        id: images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          frontend_image="${{ inputs.frontendImage }}"
+          market_image="${{ inputs.marketServiceImage }}"
+          trade_image="${{ inputs.tradeServiceImage }}"
+          settlement_image="${{ inputs.settlementServiceImage }}"
+
+          if [ -n "${ACR_LOGIN_SERVER}" ]; then
+            frontend_image="${frontend_image:-${ACR_LOGIN_SERVER}/frontend-spa:latest}"
+            market_image="${market_image:-${ACR_LOGIN_SERVER}/market-service:latest}"
+            trade_image="${trade_image:-${ACR_LOGIN_SERVER}/trade-service:latest}"
+            settlement_image="${settlement_image:-${ACR_LOGIN_SERVER}/settlement-service:latest}"
+          fi
+
+          if [ -z "${frontend_image}" ] || [ -z "${market_image}" ] || [ -z "${trade_image}" ] || [ -z "${settlement_image}" ]; then
+            echo "::error::Image resolution failed. Provide explicit workflow image inputs or set repository/environment variable ACR_LOGIN_SERVER so deploy-hackathon can use :latest tags automatically."
+            exit 1
+          fi
+
+          echo "frontend_image=${frontend_image}" >> "$GITHUB_OUTPUT"
+          echo "market_image=${market_image}" >> "$GITHUB_OUTPUT"
+          echo "trade_image=${trade_image}" >> "$GITHUB_OUTPUT"
+          echo "settlement_image=${settlement_image}" >> "$GITHUB_OUTPUT"
+
       - name: ARM what-if (preview changes)
         shell: pwsh
         run: >
@@ -86,10 +115,10 @@ jobs:
           -EnvironmentName "${{ inputs.environmentName }}"
           -Location "${{ inputs.location }}"
           -ResourceGroupName "${{ inputs.resourceGroupName }}"
-          -FrontendImage "${{ inputs.frontendImage }}"
-          -MarketServiceImage "${{ inputs.marketServiceImage }}"
-          -TradeServiceImage "${{ inputs.tradeServiceImage }}"
-          -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
+          -FrontendImage "${{ steps.images.outputs.frontend_image }}"
+          -MarketServiceImage "${{ steps.images.outputs.market_image }}"
+          -TradeServiceImage "${{ steps.images.outputs.trade_image }}"
+          -SettlementServiceImage "${{ steps.images.outputs.settlement_image }}"
 
       - name: Deploy infrastructure and container apps
         shell: pwsh
@@ -98,10 +127,10 @@ jobs:
           -EnvironmentName "${{ inputs.environmentName }}"
           -Location "${{ inputs.location }}"
           -ResourceGroupName "${{ inputs.resourceGroupName }}"
-          -FrontendImage "${{ inputs.frontendImage }}"
-          -MarketServiceImage "${{ inputs.marketServiceImage }}"
-          -TradeServiceImage "${{ inputs.tradeServiceImage }}"
-          -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
+          -FrontendImage "${{ steps.images.outputs.frontend_image }}"
+          -MarketServiceImage "${{ steps.images.outputs.market_image }}"
+          -TradeServiceImage "${{ steps.images.outputs.trade_image }}"
+          -SettlementServiceImage "${{ steps.images.outputs.settlement_image }}"
 
       - name: Resolve Container Apps FQDNs for smoke checks
         id: endpoints

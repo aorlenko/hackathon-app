@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import type { SettlementRecord, TradeRecord } from "../../contracts/trading";
 import { useTradingAuth } from "../auth/AuthProvider";
-import type { TradeRecord } from "../../contracts/trading";
 import {
   formatParticipantLabel,
   useResolvedAccountIdentities,
 } from "../account/useResolvedAccountIdentities";
+import { getUserSettlementHistory } from "./settlementHistoryApi";
 import { getUserTradeHistory } from "./tradeHistoryApi";
 
 export const TradeHistoryPage = () => {
   const auth = useTradingAuth();
+  const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
   const [trades, setTrades] = useState<TradeRecord[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const tradeById = useMemo(
+    () => new Map(trades.map((trade) => [trade.tradeId, trade])),
+    [trades],
+  );
   const participantUserIds = useMemo(
     () => trades.flatMap((trade) => [trade.buyerUserId, trade.sellerUserId]),
     [trades],
@@ -19,6 +25,15 @@ export const TradeHistoryPage = () => {
   const participantIdentities = useResolvedAccountIdentities(
     participantUserIds,
     auth.accessToken,
+  );
+  const settlementsNewestFirst = useMemo(
+    () =>
+      [...settlements].sort((a, b) => {
+        const ta = new Date(a.completedAtUtc ?? a.startedAtUtc).getTime();
+        const tb = new Date(b.completedAtUtc ?? b.startedAtUtc).getTime();
+        return tb - ta;
+      }),
+    [settlements],
   );
 
   useEffect(() => {
@@ -28,9 +43,17 @@ export const TradeHistoryPage = () => {
     }
 
     setLoading(true);
-    void getUserTradeHistory(auth.userId, auth.accessToken)
-      .then((response) => {
-        setTrades(response);
+    void Promise.all([
+      getUserSettlementHistory(auth.userId, auth.accessToken).catch(
+        () => [] as SettlementRecord[],
+      ),
+      getUserTradeHistory(auth.userId, auth.accessToken).catch(
+        () => [] as TradeRecord[],
+      ),
+    ])
+      .then(([settlementHistory, tradeHistory]) => {
+        setSettlements(settlementHistory);
+        setTrades(tradeHistory);
         setError("");
       })
       .catch((requestError: unknown) => {
@@ -43,66 +66,89 @@ export const TradeHistoryPage = () => {
       .finally(() => setLoading(false));
   }, [auth.accessToken, auth.userId]);
 
+  const labelOpts = {
+    currentUserId: auth.userId,
+    currentUserEmail: auth.accountSnapshot?.email,
+    currentUserDisplayName: auth.accountSnapshot?.displayName ?? auth.displayName,
+  };
+
   return (
     <div className="trading-pets-page">
       <header className="trading-pets-page__header">
         <h1>Trade history</h1>
-        <p className="muted">Trades recorded for your account.</p>
+        <p className="muted">
+          Completed and in-flight trade settlements for your account, with execution details when the trade record is
+          available.
+        </p>
       </header>
-      {loading ? <p className="trading-pets-loading">Loading trades...</p> : null}
+      {loading ? <p className="trading-pets-loading">Loading trade history...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
-      {!loading && !error && trades.length === 0 ? (
-        <p className="muted">No historical trades found for this user.</p>
+      {!loading && !error && settlements.length === 0 ? (
+        <p className="muted">No trade history found for this user.</p>
       ) : null}
-      {trades.length > 0 ? (
-        <table className="trading-pets-table">
+      {settlements.length > 0 ? (
+        <div className="trading-pets-table-scroll">
+          <table className="trading-pets-table trading-pets-table--settlement-history">
             <thead>
               <tr>
-                <th>Executed</th>
+                <th>Trade executed</th>
+                <th>Settlement started</th>
                 <th>Symbol</th>
                 <th>Price</th>
-                <th>Quantity</th>
+                <th>Qty</th>
                 <th>Buyer</th>
                 <th>Seller</th>
+                <th>Status</th>
+                <th>Completed</th>
               </tr>
             </thead>
             <tbody>
-              {trades.map((trade) => (
-                <tr key={trade.tradeId}>
-                  <td>{new Date(trade.executedAtUtc).toLocaleString()}</td>
-                  <td>{trade.symbol}</td>
-                  <td>{trade.price.toFixed(2)}</td>
-                  <td>{trade.quantity}</td>
-                  <td>
-                    {formatParticipantLabel(
-                      trade.buyerUserId,
-                      participantIdentities,
-                      {
-                        currentUserId: auth.userId,
-                        currentUserEmail: auth.accountSnapshot?.email,
-                        currentUserDisplayName:
-                          auth.accountSnapshot?.displayName ?? auth.displayName,
-                        fallbackLabel: "Buyer",
-                      },
-                    )}
-                  </td>
-                  <td>
-                    {formatParticipantLabel(
-                      trade.sellerUserId,
-                      participantIdentities,
-                      {
-                        currentUserId: auth.userId,
-                        currentUserEmail: auth.accountSnapshot?.email,
-                        currentUserDisplayName:
-                          auth.accountSnapshot?.displayName ?? auth.displayName,
-                        fallbackLabel: "Seller",
-                      },
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {settlementsNewestFirst.map((settlement) => {
+                const trade = tradeById.get(settlement.tradeId);
+
+                return (
+                  <tr key={settlement.settlementId}>
+                    <td>{trade ? new Date(trade.executedAtUtc).toLocaleString() : "—"}</td>
+                    <td>{new Date(settlement.startedAtUtc).toLocaleString()}</td>
+                    <td>{trade?.symbol ?? "—"}</td>
+                    <td>{trade != null ? `$${trade.price.toFixed(2)}` : "—"}</td>
+                    <td>{trade?.quantity ?? "—"}</td>
+                    <td>
+                      {trade
+                        ? formatParticipantLabel(trade.buyerUserId, participantIdentities, {
+                            ...labelOpts,
+                            fallbackLabel: "Buyer",
+                          })
+                        : "—"}
+                    </td>
+                    <td>
+                      {trade
+                        ? formatParticipantLabel(trade.sellerUserId, participantIdentities, {
+                            ...labelOpts,
+                            fallbackLabel: "Seller",
+                          })
+                        : "—"}
+                    </td>
+                    <td>
+                      {settlement.status}
+                      {settlement.status === "FAILED" && settlement.failureReason ? (
+                        <span className="muted small">
+                          <br />
+                          {settlement.failureReason}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td>
+                      {settlement.completedAtUtc
+                        ? new Date(settlement.completedAtUtc).toLocaleString()
+                        : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
-        </table>
+          </table>
+        </div>
       ) : null}
     </div>
   );

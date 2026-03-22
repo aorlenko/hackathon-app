@@ -90,7 +90,7 @@ describe("Trading market routes (008)", () => {
     });
   });
 
-  it("shows Primary supply market and Resale marketplace nav links", () => {
+  it("shows primary market, resale, and notifications nav links", () => {
     renderTradingShell("/pets/primary-supply");
     const nav = screen.getByRole("navigation", { name: /^primary$/i });
     expect(within(nav).getByRole("link", { name: /^Primary supply market$/i })).toHaveAttribute(
@@ -98,6 +98,10 @@ describe("Trading market routes (008)", () => {
       "/pets/primary-supply",
     );
     expect(within(nav).getByRole("link", { name: /^Resale marketplace$/i })).toHaveAttribute("href", "/pets/resale");
+    expect(within(nav).getByRole("link", { name: /^My notifications$/i })).toHaveAttribute(
+      "href",
+      "/pets/notifications",
+    );
   });
 
   it("redirects legacy /pets/workspace to primary supply with correct h1", async () => {

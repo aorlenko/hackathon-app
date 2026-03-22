@@ -15,10 +15,10 @@ const RootIndex = () => {
   }
   return <Navigate to="/pets/primary-supply" replace />;
 };
-import { SettlementHistoryPage } from "./features/history/SettlementHistoryPage";
 import { TradeHistoryPage } from "./features/history/TradeHistoryPage";
 import {
   LeaderboardPage,
+  MyNotificationsPage,
   MyPetTraderProvider,
   MyPetsPage,
   PetAnalysisPage,
@@ -42,7 +42,7 @@ export const Header = () => {
                 <h1>Pet Ledger</h1>
               </div>
             </div>
-            <p className="muted app-header__tagline">Primary supply, resale, and settlement history.</p>
+            <p className="muted app-header__tagline">Primary supply, resale, notifications, and trade history.</p>
           </div>
           <div className="auth-panel">
             {auth.authError ? (
@@ -76,9 +76,9 @@ export const Header = () => {
           <NavLink to="/pets/primary-supply">Primary supply market</NavLink>
           <NavLink to="/pets/resale">Resale marketplace</NavLink>
           <NavLink to="/pets/my-pets">My pets</NavLink>
+          <NavLink to="/pets/notifications">My notifications</NavLink>
           <NavLink to="/pets/leaderboard">Leaderboard</NavLink>
           <NavLink to="/history/trades">Trade history</NavLink>
-          <NavLink to="/history/settlements">Settlement history</NavLink>
         </nav>
       </div>
     </header>
@@ -94,15 +94,13 @@ export const App = () => {
           <Route path="/" element={<RootIndex />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/history/trades" element={<TradeHistoryPage />} />
-            <Route
-              path="/history/settlements"
-              element={<SettlementHistoryPage />}
-            />
+            <Route path="/history/settlements" element={<Navigate to="/history/trades" replace />} />
             <Route element={<MyPetTraderProvider />}>
               <Route path="/pets/workspace" element={<Navigate to="/pets/primary-supply" replace />} />
               <Route path="/pets/primary-supply" element={<PrimarySupplyMarketPage />} />
               <Route path="/pets/resale" element={<ResaleMarketplacePage />} />
               <Route path="/pets/my-pets" element={<MyPetsPage />} />
+              <Route path="/pets/notifications" element={<MyNotificationsPage />} />
               <Route path="/pets/market" element={<Navigate to="/pets/resale" replace />} />
               <Route path="/pets/leaderboard" element={<LeaderboardPage />} />
               <Route path="/pets/analysis/:petId" element={<PetAnalysisPage />} />

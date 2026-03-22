@@ -8,6 +8,34 @@ import {
 import { getUserSettlementHistory } from "./settlementHistoryApi";
 import { getUserTradeHistory } from "./tradeHistoryApi";
 
+const getTradePerspective = (
+  trade: TradeRecord,
+  currentUserId: string | null | undefined,
+) => {
+  const normalizedCurrentUserId =
+    typeof currentUserId === "string" ? currentUserId.trim() : "";
+
+  if (normalizedCurrentUserId && trade.buyerUserId === normalizedCurrentUserId) {
+    return {
+      sideLabel: "Buy",
+      sideTone: "ok",
+      counterpartyUserId: trade.sellerUserId,
+      counterpartyFallbackLabel: "Seller",
+    } as const;
+  }
+
+  if (normalizedCurrentUserId && trade.sellerUserId === normalizedCurrentUserId) {
+    return {
+      sideLabel: "Sell",
+      sideTone: "warn",
+      counterpartyUserId: trade.buyerUserId,
+      counterpartyFallbackLabel: "Buyer",
+    } as const;
+  }
+
+  return null;
+};
+
 export const TradeHistoryPage = () => {
   const auth = useTradingAuth();
   const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
@@ -91,53 +119,50 @@ export const TradeHistoryPage = () => {
           <table className="trading-pets-table trading-pets-table--settlement-history">
             <thead>
               <tr>
-                <th>Trade executed</th>
-                <th>Settlement started</th>
-                <th>Symbol</th>
+                <th>Side</th>
                 <th>Price</th>
                 <th>Qty</th>
-                <th>Buyer</th>
-                <th>Seller</th>
-                <th>Status</th>
-                <th>Completed</th>
+                <th>Symbol</th>
+                <th>With</th>
+                <th>Trade time</th>
+                <th>Settlement time</th>
               </tr>
             </thead>
             <tbody>
               {settlementsNewestFirst.map((settlement) => {
                 const trade = tradeById.get(settlement.tradeId);
+                const tradePerspective = trade
+                  ? getTradePerspective(trade, auth.userId)
+                  : null;
 
                 return (
                   <tr key={settlement.settlementId}>
-                    <td>{trade ? new Date(trade.executedAtUtc).toLocaleString() : "—"}</td>
-                    <td>{new Date(settlement.startedAtUtc).toLocaleString()}</td>
-                    <td>{trade?.symbol ?? "—"}</td>
+                    <td>
+                      {tradePerspective ? (
+                        <span className={`tag ${tradePerspective.sideTone}`}>
+                          {tradePerspective.sideLabel}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td>{trade != null ? `$${trade.price.toFixed(2)}` : "—"}</td>
                     <td>{trade?.quantity ?? "—"}</td>
+                    <td>{trade?.symbol ?? "—"}</td>
                     <td>
-                      {trade
-                        ? formatParticipantLabel(trade.buyerUserId, participantIdentities, {
-                            ...labelOpts,
-                            fallbackLabel: "Buyer",
-                          })
+                      {trade && tradePerspective
+                        ? formatParticipantLabel(
+                            tradePerspective.counterpartyUserId,
+                            participantIdentities,
+                            {
+                              ...labelOpts,
+                              fallbackLabel:
+                                tradePerspective.counterpartyFallbackLabel,
+                            },
+                          )
                         : "—"}
                     </td>
-                    <td>
-                      {trade
-                        ? formatParticipantLabel(trade.sellerUserId, participantIdentities, {
-                            ...labelOpts,
-                            fallbackLabel: "Seller",
-                          })
-                        : "—"}
-                    </td>
-                    <td>
-                      {settlement.status}
-                      {settlement.status === "FAILED" && settlement.failureReason ? (
-                        <span className="muted small">
-                          <br />
-                          {settlement.failureReason}
-                        </span>
-                      ) : null}
-                    </td>
+                    <td>{trade ? new Date(trade.executedAtUtc).toLocaleString() : "—"}</td>
                     <td>
                       {settlement.completedAtUtc
                         ? new Date(settlement.completedAtUtc).toLocaleString()

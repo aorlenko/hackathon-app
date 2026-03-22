@@ -42,7 +42,9 @@ param auth0ClientId string = 'replace-me'
 
 var namePrefix = '${projectName}-${environmentName}'
 var sqlServerName = 'sql-${namePrefix}-${uniqueString(resourceGroup().id)}'
-var sqlDatabaseName = '${projectName}-${environmentName}'
+var marketSqlDatabaseName = '${projectName}-${environmentName}-market'
+var tradeSqlDatabaseName = '${projectName}-${environmentName}-trade'
+var settlementSqlDatabaseName = '${projectName}-${environmentName}-settlement'
 var serviceBusNamespaceName = 'sb-${namePrefix}-${uniqueString(resourceGroup().id)}'
 var serviceBusTopicName = 'trading.lifecycle'
 // Key Vault names: 3–24 chars, alphanumeric + single hyphens, no consecutive hyphens; kv-{env}-{hash} exceeded 24 for long env names.
@@ -54,7 +56,9 @@ var marketAppName = 'mkt-${namePrefix}'
 var tradeAppName = 'trd-${namePrefix}'
 var settlementAppName = 'stl-${namePrefix}'
 var acrName = take(replace('acr${projectName}${environmentName}${uniqueString(resourceGroup().id)}', '-', ''), 50)
-var sqlConnectionString = 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${sqlDatabase.name};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+var marketSqlConnectionString = 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${marketSqlDatabaseName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+var tradeSqlConnectionString = 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${tradeSqlDatabaseName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+var settlementSqlConnectionString = 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${settlementSqlDatabaseName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring-${namePrefix}'
@@ -154,8 +158,36 @@ resource allowAzureServicesFirewallRule 'Microsoft.Sql/servers/firewallRules@202
   }
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
-  name: '${sqlServer.name}/${sqlDatabaseName}'
+resource marketSqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+  name: '${sqlServer.name}/${marketSqlDatabaseName}'
+  location: location
+  tags: tags
+  sku: {
+    name: 'S0'
+    tier: 'Standard'
+  }
+  properties: {
+    zoneRedundant: false
+    collation: 'SQL_Latin1_General_CP1_CI_AS'
+  }
+}
+
+resource tradeSqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+  name: '${sqlServer.name}/${tradeSqlDatabaseName}'
+  location: location
+  tags: tags
+  sku: {
+    name: 'S0'
+    tier: 'Standard'
+  }
+  properties: {
+    zoneRedundant: false
+    collation: 'SQL_Latin1_General_CP1_CI_AS'
+  }
+}
+
+resource settlementSqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+  name: '${sqlServer.name}/${settlementSqlDatabaseName}'
   location: location
   tags: tags
   sku: {
@@ -183,10 +215,24 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-resource sqlConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: '${keyVault.name}/sql-connection-string'
+resource marketSqlConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: '${keyVault.name}/market-sql-connection-string'
   properties: {
-    value: sqlConnectionString
+    value: marketSqlConnectionString
+  }
+}
+
+resource tradeSqlConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: '${keyVault.name}/trade-sql-connection-string'
+  properties: {
+    value: tradeSqlConnectionString
+  }
+}
+
+resource settlementSqlConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: '${keyVault.name}/settlement-sql-connection-string'
+  properties: {
+    value: settlementSqlConnectionString
   }
 }
 
@@ -358,6 +404,13 @@ resource marketService 'Microsoft.App/containerApps@2024-03-01' = {
   dependsOn: [
     marketKeyVaultUser
     marketAcrPull
+    allowAzureServicesFirewallRule
+    marketSqlDatabase
+    marketSqlConnectionSecret
+    serviceBusConnectionSecret
+    appInsightsConnectionSecret
+    auth0DomainSecret
+    auth0AudienceSecret
   ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
@@ -376,7 +429,7 @@ resource marketService 'Microsoft.App/containerApps@2024-03-01' = {
       secrets: [
         {
           name: 'sql-connection-string'
-          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/sql-connection-string'
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/market-sql-connection-string'
           identity: marketIdentity.id
         }
         {
@@ -471,6 +524,13 @@ resource tradeService 'Microsoft.App/containerApps@2024-03-01' = {
   dependsOn: [
     tradeKeyVaultUser
     tradeAcrPull
+    allowAzureServicesFirewallRule
+    tradeSqlDatabase
+    tradeSqlConnectionSecret
+    serviceBusConnectionSecret
+    appInsightsConnectionSecret
+    auth0DomainSecret
+    auth0AudienceSecret
   ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
@@ -489,7 +549,7 @@ resource tradeService 'Microsoft.App/containerApps@2024-03-01' = {
       secrets: [
         {
           name: 'sql-connection-string'
-          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/sql-connection-string'
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/trade-sql-connection-string'
           identity: tradeIdentity.id
         }
         {
@@ -584,6 +644,13 @@ resource settlementService 'Microsoft.App/containerApps@2024-03-01' = {
   dependsOn: [
     settlementKeyVaultUser
     settlementAcrPull
+    allowAzureServicesFirewallRule
+    settlementSqlDatabase
+    settlementSqlConnectionSecret
+    serviceBusConnectionSecret
+    appInsightsConnectionSecret
+    auth0DomainSecret
+    auth0AudienceSecret
   ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
@@ -602,7 +669,7 @@ resource settlementService 'Microsoft.App/containerApps@2024-03-01' = {
       secrets: [
         {
           name: 'sql-connection-string'
-          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/sql-connection-string'
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/settlement-sql-connection-string'
           identity: settlementIdentity.id
         }
         {
@@ -697,6 +764,9 @@ resource frontendSpa 'Microsoft.App/containerApps@2024-03-01' = {
   dependsOn: [
     frontendKeyVaultUser
     frontendAcrPull
+    auth0DomainSecret
+    auth0AudienceSecret
+    auth0ClientIdSecret
   ]
   properties: {
     managedEnvironmentId: containerAppEnvironment.id

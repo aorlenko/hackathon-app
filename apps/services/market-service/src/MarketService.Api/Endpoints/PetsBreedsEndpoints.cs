@@ -1,4 +1,5 @@
 using MarketService.Application.Abstractions;
+using MarketService.Application.Pets;
 
 namespace MarketService.Api.Endpoints;
 
@@ -20,6 +21,7 @@ public static class PetsBreedsEndpoints
         {
             id = b.Id,
             name = b.Name,
+            breedImageUrl = PetBreedImageUrls.TryGetByBreedName(b.Name),
             category = b.Category,
             lifespanYears = b.LifespanYears,
             baselineDesirability = b.BaselineDesirability,

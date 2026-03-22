@@ -22,6 +22,7 @@ describe("PrimaryMarketPanel", () => {
       {
         id: "b1",
         name: "Aurora Cat",
+        breedImageUrl: "https://example.com/aurora-cat.jpg",
         category: "c",
         lifespanYears: 10,
         baselineDesirability: 1,
@@ -32,6 +33,7 @@ describe("PrimaryMarketPanel", () => {
       {
         id: "b2",
         name: "Solar Hound",
+        breedImageUrl: "https://example.com/solar-hound.jpg",
         category: "working_dog",
         lifespanYears: 14,
         baselineDesirability: 7,
@@ -68,6 +70,8 @@ describe("PrimaryMarketPanel", () => {
     expect(within(dl as HTMLElement).getByText("$25.50")).toBeInTheDocument();
     expect(within(dl as HTMLElement).getByText(/Remaining supply/i)).toBeInTheDocument();
     expect(within(dl as HTMLElement).getByText(/^3$/)).toBeInTheDocument();
+    const image = screen.getByRole("img", { name: /aurora cat \(breed reference\)/i });
+    expect(image).toHaveAttribute("src", "https://example.com/aurora-cat.jpg");
     expect(screen.getByRole("spinbutton", { name: /quantity/i })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /buy from primary supply/i }),
@@ -86,5 +90,42 @@ describe("PrimaryMarketPanel", () => {
     expect(within(dl as HTMLElement).getByText(/\$2\.50/)).toBeInTheDocument();
     expect(within(dl as HTMLElement).getByText("$40.00")).toBeInTheDocument();
     expect(within(dl as HTMLElement).getByText(/^5$/)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /solar hound \(breed reference\)/i })).toHaveAttribute(
+      "src",
+      "https://example.com/solar-hound.jpg",
+    );
+  });
+
+  it("shows an explicit out-of-stock state and disables buying when supply is zero", async () => {
+    getBreeds.mockResolvedValueOnce([
+      {
+        id: "b1",
+        name: "Aurora Cat",
+        category: "c",
+        lifespanYears: 10,
+        baselineDesirability: 1,
+        maintenanceCost: 1,
+        retailPrice: 25.5,
+        remainingSupply: 0,
+      },
+    ]);
+
+    render(
+      <PrimaryMarketPanel
+        traderId="t1"
+        accessToken="tok"
+        reloadToken={0}
+        onPurchased={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(getBreeds).toHaveBeenCalled());
+
+    expect(screen.getByText(/this breed is out of stock right now/i)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /buy from primary supply/i });
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+    expect(purchasePets).not.toHaveBeenCalled();
   });
 });

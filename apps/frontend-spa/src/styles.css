@@ -520,6 +520,13 @@ select {
   filter: brightness(1.05);
 }
 
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: none;
+}
+
 a.primary-button.inline-link,
 button.primary-button.inline-link {
   text-decoration: none;
@@ -1006,8 +1013,8 @@ button.primary-button.inline-link {
 }
 
 .trading-pets-primary__facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  display: flex;
+  align-items: center;
   gap: 0.65rem;
   margin: 0;
   padding: 0.65rem 0.75rem;
@@ -1016,7 +1023,23 @@ button.primary-button.inline-link {
   background: #f8fafc;
 }
 
-.trading-pets-primary__facts dt {
+.trading-pets-primary__media {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
+  flex-shrink: 0;
+}
+
+.trading-pets-primary__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.trading-pets-primary__stats dt {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 600;
@@ -1025,9 +1048,14 @@ button.primary-button.inline-link {
   color: var(--tp-muted);
 }
 
-.trading-pets-primary__facts dd {
+.trading-pets-primary__stats dd {
   margin: 0.15rem 0 0;
   font-size: 1rem;
+}
+
+.trading-pets-primary__thumb {
+  width: 4.5rem;
+  height: 4.5rem;
 }
 
 .trading-pets-primary__price {
@@ -1037,6 +1065,11 @@ button.primary-button.inline-link {
 .trading-pets-primary__buy {
   min-height: 44px;
   margin-top: 0.25rem;
+}
+
+.trading-pets-primary__status {
+  margin: -0.15rem 0 0;
+  color: #b45309;
 }
 
 .trading-pets-listing-card {

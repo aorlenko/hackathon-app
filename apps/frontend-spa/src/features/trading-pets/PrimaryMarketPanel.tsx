@@ -39,6 +39,8 @@ export const PrimaryMarketPanel = ({
     () => breeds.find((b) => b.id === breedId),
     [breeds, breedId],
   );
+  const isOutOfStock = Boolean(selected && selected.remainingSupply <= 0);
+  const buyDisabled = loading || !breedId || !selected || isOutOfStock;
 
   const loadBreeds = async () => {
     setError(null);
@@ -129,40 +131,56 @@ export const PrimaryMarketPanel = ({
                 </select>
               </label>
               {selected ? (
-                <dl className="trading-pets-primary__facts" id="trading-primary-supply-hint">
-                  <div>
-                    <dt>Category</dt>
-                    <dd>{formatBreedCategory(selected.category)}</dd>
-                  </div>
-                  <div>
-                    <dt>Expected lifespan</dt>
-                    <dd>{selected.lifespanYears} years</dd>
-                  </div>
-                  <div>
-                    <dt>Desirability</dt>
-                    <dd>{selected.baselineDesirability}</dd>
-                  </div>
-                  <div>
-                    <dt>Maintenance cost</dt>
-                    <dd>${selected.maintenanceCost.toFixed(2)}</dd>
-                  </div>
-                  <div>
-                    <dt>Retail price (each)</dt>
-                    <dd>
-                      <strong className="trading-pets-primary__price">${selected.retailPrice.toFixed(2)}</strong>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Remaining supply</dt>
-                    <dd>{selected.remainingSupply}</dd>
-                  </div>
-                </dl>
+                <div className="trading-pets-primary__facts" id="trading-primary-supply-hint">
+                  {selected.breedImageUrl ? (
+                    <div className="trading-pets-primary__media">
+                      <img
+                        className="trading-pets-owned-row__thumb trading-pets-primary__thumb"
+                        src={selected.breedImageUrl}
+                        alt={`${selected.name} (breed reference)`}
+                        loading="lazy"
+                        decoding="async"
+                        width={72}
+                        height={72}
+                      />
+                    </div>
+                  ) : null}
+                  <dl className="trading-pets-primary__stats">
+                    <div>
+                      <dt>Category</dt>
+                      <dd>{formatBreedCategory(selected.category)}</dd>
+                    </div>
+                    <div>
+                      <dt>Expected lifespan</dt>
+                      <dd>{selected.lifespanYears} years</dd>
+                    </div>
+                    <div>
+                      <dt>Desirability</dt>
+                      <dd>{selected.baselineDesirability}</dd>
+                    </div>
+                    <div>
+                      <dt>Maintenance cost</dt>
+                      <dd>${selected.maintenanceCost.toFixed(2)}</dd>
+                    </div>
+                    <div>
+                      <dt>Retail price (each)</dt>
+                      <dd>
+                        <strong className="trading-pets-primary__price">${selected.retailPrice.toFixed(2)}</strong>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Remaining supply</dt>
+                      <dd>{selected.remainingSupply}</dd>
+                    </div>
+                  </dl>
+                </div>
               ) : null}
               <label className="trading-pets-field">
                 <span>Quantity</span>
                 <input
                   type="number"
                   min={1}
+                  max={selected && selected.remainingSupply > 0 ? selected.remainingSupply : undefined}
                   value={quantity}
                   onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
                 />
@@ -172,10 +190,15 @@ export const PrimaryMarketPanel = ({
                   Line total at retail: <strong>${(selected.retailPrice * quantity).toFixed(2)}</strong>
                 </p>
               ) : null}
+              {isOutOfStock ? (
+                <p className="trading-pets-primary__status muted small" role="status">
+                  This breed is out of stock right now. Choose another breed or check back later.
+                </p>
+              ) : null}
               <button
                 type="button"
                 className="primary-button trading-pets-primary__buy"
-                disabled={loading || !breedId || !selected || selected.remainingSupply <= 0}
+                disabled={buyDisabled}
                 onClick={() => void onPurchase()}
               >
                 Buy from primary supply

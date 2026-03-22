@@ -4,6 +4,8 @@ import { createHeaders, fetchJson } from "../../lib/http";
 export type BreedDto = {
   id: string;
   name: string;
+  /** Present when the server has a static image URL for this breed name. */
+  breedImageUrl?: string | null;
   category: string;
   lifespanYears: number;
   baselineDesirability: number;

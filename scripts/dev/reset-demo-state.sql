@@ -1,8 +1,4 @@
-USE [TradingPlatformMarket];
-GO
-
-SET XACT_ABORT ON;
-BEGIN TRANSACTION;
+-- TradingPlatformMarket
 
 DELETE FROM dbo.PetNotifications;
 DELETE FROM dbo.PetListingBids;
@@ -19,28 +15,14 @@ SET AvailableCash = 1000,
 
 DELETE FROM dbo.OrderMatchAudits;
 DELETE FROM dbo.Orders;
-
-COMMIT TRANSACTION;
 GO
 
-USE [TradingPlatformTrade];
-GO
-
-SET XACT_ABORT ON;
-BEGIN TRANSACTION;
+-- TradingPlatformTrade
 
 DELETE FROM dbo.Trades;
-
-COMMIT TRANSACTION;
 GO
 
-USE [TradingPlatformSettlement];
-GO
-
-SET XACT_ABORT ON;
-BEGIN TRANSACTION;
+-- TradingPlatformSettlement
 
 DELETE FROM dbo.Settlements;
-
-COMMIT TRANSACTION;
 GO

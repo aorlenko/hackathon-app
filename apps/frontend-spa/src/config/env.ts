@@ -10,6 +10,13 @@ const runtimeConfig =
     : undefined;
 
 const read = (key: string, fallback = ""): string => {
+  if (runtimeConfig && Object.prototype.hasOwnProperty.call(runtimeConfig, key)) {
+    const runtimeValue = runtimeConfig[key];
+    return typeof runtimeValue === "string" && runtimeValue.length > 0
+      ? runtimeValue
+      : fallback;
+  }
+
   const runtimeValue = runtimeConfig?.[key];
   if (typeof runtimeValue === "string" && runtimeValue.length > 0) {
     return runtimeValue;

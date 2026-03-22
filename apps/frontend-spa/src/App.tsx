@@ -42,9 +42,7 @@ export const Header = () => {
                 <h1>Pet Ledger</h1>
               </div>
             </div>
-            <p className="muted app-header__tagline">
-              Pet marketplace — primary supply, pets for sale from other traders, and settlement history.
-            </p>
+            <p className="muted app-header__tagline">Primary supply, resale, and settlement history.</p>
           </div>
           <div className="auth-panel">
             {auth.authError ? (

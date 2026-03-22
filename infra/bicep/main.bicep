@@ -43,6 +43,9 @@ param auth0ClientId string = 'replace-me'
 @description('Whether to deploy Container Apps in this run. False allows infra-first deployments before EF migrations.')
 param deployApps bool = true
 
+@description('Unique suffix used to force a new Container Apps revision on each deployment, even when image tags stay at :latest.')
+param deploymentRevisionSuffix string = 'manual'
+
 var namePrefix = '${projectName}-${environmentName}'
 var sqlServerName = 'sql-${namePrefix}-${uniqueString(resourceGroup().id)}'
 var marketSqlDatabaseName = '${projectName}-${environmentName}-market'
@@ -458,6 +461,7 @@ resource marketService 'Microsoft.App/containerApps@2024-03-01' = if (deployApps
       ]
     }
     template: {
+      revisionSuffix: 'r${deploymentRevisionSuffix}'
       containers: [
         {
           name: 'market-service'
@@ -578,6 +582,7 @@ resource tradeService 'Microsoft.App/containerApps@2024-03-01' = if (deployApps)
       ]
     }
     template: {
+      revisionSuffix: 'r${deploymentRevisionSuffix}'
       containers: [
         {
           name: 'trade-service'
@@ -698,6 +703,7 @@ resource settlementService 'Microsoft.App/containerApps@2024-03-01' = if (deploy
       ]
     }
     template: {
+      revisionSuffix: 'r${deploymentRevisionSuffix}'
       containers: [
         {
           name: 'settlement-service'
@@ -804,6 +810,7 @@ resource frontendSpa 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) 
       ]
     }
     template: {
+      revisionSuffix: 'r${deploymentRevisionSuffix}'
       containers: [
         {
           name: 'frontend-spa'

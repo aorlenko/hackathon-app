@@ -113,6 +113,7 @@ For deploy workflow inventories, see **`contracts/deployment-pipeline-contract.m
 
 1. GitHub → **Actions** → workflow **deploy-hackathon** → **Run workflow**.  
 2. Set inputs: `environmentName`, `location`, `resourceGroupName`, `runSmoke` (default on). The workflow automatically deploys `:latest` tags from **`vars.ACR_LOGIN_SERVER`**.  
+   Each `deploy-hackathon` run now also stamps a unique Container Apps revision suffix, so Azure creates a fresh revision and repulls `:latest` instead of silently keeping the previous revision when the tag string is unchanged.
 3. Expected step order: **Validate Bicep templates and hackathon parameters JSON** → **Setup .NET SDK / EF CLI** → **Ensure resource group exists (idempotent)** → **ARM what-if** → **Deploy infrastructure only** → **Apply EF Core migrations** (market, trade, settlement) → **Deploy container apps** → **Resolve Container Apps FQDNs for smoke checks** → **Run HTTP smoke checks** (if `runSmoke`).
 
 ---

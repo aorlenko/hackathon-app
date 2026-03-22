@@ -10,6 +10,7 @@ param(
     [string]$Auth0Domain = $env:AUTH0_DOMAIN,
     [string]$Auth0Audience = $env:AUTH0_AUDIENCE,
     [string]$Auth0ClientId = $env:AUTH0_CLIENT_ID,
+    [string]$DeploymentRevisionSuffix = (Get-Date -Format 'yyyyMMddHHmmss'),
     [string]$FrontendImage = "",
     [string]$MarketServiceImage = "",
     [string]$TradeServiceImage = "",
@@ -59,7 +60,8 @@ $parameterArguments = @(
     "@$ParametersFile",
     "environmentName=$EnvironmentName",
     "location=$Location",
-    "deployApps=$($DeployApps.ToString().ToLowerInvariant())"
+    "deployApps=$($DeployApps.ToString().ToLowerInvariant())",
+    "deploymentRevisionSuffix=$DeploymentRevisionSuffix"
 )
 
 if ($SqlAdminLogin) {

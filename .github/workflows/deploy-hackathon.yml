@@ -103,6 +103,7 @@ jobs:
           -EnvironmentName "${{ inputs.environmentName }}"
           -Location "${{ inputs.location }}"
           -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -DeploymentRevisionSuffix "${{ github.run_number }}-${{ github.run_attempt }}"
           -FrontendImage "${{ steps.images.outputs.frontend_image }}"
           -MarketServiceImage "${{ steps.images.outputs.market_image }}"
           -TradeServiceImage "${{ steps.images.outputs.trade_image }}"
@@ -115,6 +116,7 @@ jobs:
           -EnvironmentName "${{ inputs.environmentName }}"
           -Location "${{ inputs.location }}"
           -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -DeploymentRevisionSuffix "${{ github.run_number }}-${{ github.run_attempt }}"
           -DeployApps:$false
           -FrontendImage "${{ steps.images.outputs.frontend_image }}"
           -MarketServiceImage "${{ steps.images.outputs.market_image }}"
@@ -185,6 +187,7 @@ jobs:
           -EnvironmentName "${{ inputs.environmentName }}"
           -Location "${{ inputs.location }}"
           -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -DeploymentRevisionSuffix "${{ github.run_number }}-${{ github.run_attempt }}"
           -FrontendImage "${{ steps.images.outputs.frontend_image }}"
           -MarketServiceImage "${{ steps.images.outputs.market_image }}"
           -TradeServiceImage "${{ steps.images.outputs.trade_image }}"

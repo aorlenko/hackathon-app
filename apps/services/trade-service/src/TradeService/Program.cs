@@ -11,23 +11,16 @@ using Trading.Contracts.Events;
 using Trading.Messaging;
 using Trading.Observability;
 
-const string LocalDevCorsPolicy = "LocalDevFrontend";
-var localDevOrigins = new[]
-{
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174"
-};
+const string DemoCorsPolicy = "DemoFrontend";
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTradingPlatformConfiguration(builder.Configuration, "trade-service");
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(LocalDevCorsPolicy, policy =>
+    options.AddPolicy(DemoCorsPolicy, policy =>
     {
-        policy.WithOrigins(localDevOrigins)
+        policy.SetIsOriginAllowed(_ => true)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -46,7 +39,7 @@ builder.Services.AddScoped<GetRecentTradesQuery>();
 builder.Services.AddScoped<GetUserTradesQuery>();
 
 var app = builder.Build();
-app.UseCors(LocalDevCorsPolicy);
+app.UseCors(DemoCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 

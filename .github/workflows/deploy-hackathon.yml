@@ -11,12 +11,12 @@ on:
       location:
         description: Azure region for the resource group.
         required: true
-        default: eastus
+        default: westus2
         type: string
       resourceGroupName:
         description: Target Azure resource group.
         required: true
-        default: rg-trading-hackathon-dev
+        default: rg-hackathon
         type: string
       runSmoke:
         description: Run post-deploy smoke checks.

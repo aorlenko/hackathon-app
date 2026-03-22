@@ -10,8 +10,11 @@ import { Outlet } from "react-router-dom";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { emitPetTraderSnapshotUpdated } from "./petTraderSnapshotEvents";
 import { getMyTraderSnapshot, type TraderSnapshotDto } from "./tradingPetsApi";
-import { TradingPetToastStack } from "./TradingPetToastStack";
-import { useTraderNotificationToasts } from "./useTraderNotificationToasts";
+import { TradingPetToastStack, type PetTradingToast } from "./TradingPetToastStack";
+import {
+  useTraderNotificationToasts,
+  type TraderToastPayload,
+} from "./useTraderNotificationToasts";
 import { useTradingPetsRealtime } from "./useTradingPetsRealtime";
 
 type Ctx = {
@@ -22,17 +25,24 @@ type Ctx = {
   refresh: () => Promise<void>;
   /** Bumps on each SignalR-driven refresh so panels can reload listings/inventory. */
   hubInvalidateSeq: number;
+  showToast: (payload: TraderToastPayload) => void;
 };
 
-type HubSyncProps = { bumpHubInvalidate: () => void };
+type HubSyncProps = {
+  bumpHubInvalidate: () => void;
+  toasts: PetTradingToast[];
+  dismissToast: (toastInstanceId: string) => void;
+  onTraderNotificationsAdded: () => Promise<void>;
+};
 
-function MyPetTraderHubSync({ bumpHubInvalidate }: HubSyncProps) {
+function MyPetTraderHubSync({
+  bumpHubInvalidate,
+  toasts,
+  dismissToast,
+  onTraderNotificationsAdded,
+}: HubSyncProps) {
   const auth = useTradingAuth();
   const { traderId, refresh } = useMyPetTrader();
-  const { toasts, dismissToast, onTraderNotificationsAdded } = useTraderNotificationToasts(
-    traderId,
-    auth.accessToken,
-  );
 
   const onHubRefresh = useCallback(async () => {
     try {
@@ -68,6 +78,8 @@ export const MyPetTraderProvider = () => {
   const [error, setError] = useState<string | null>(null);
   const [hubInvalidateSeq, setHubInvalidateSeq] = useState(0);
   const bumpHubInvalidate = useCallback(() => setHubInvalidateSeq((n) => n + 1), []);
+  const { toasts, dismissToast, onTraderNotificationsAdded, showToast } =
+    useTraderNotificationToasts(traderId, auth.accessToken);
 
   const refresh = useCallback(async () => {
     if (!auth.accessToken) {
@@ -101,8 +113,8 @@ export const MyPetTraderProvider = () => {
   }, [snapshot]);
 
   const value = useMemo(
-    () => ({ traderId, snapshot, loading, error, refresh, hubInvalidateSeq }),
-    [traderId, snapshot, loading, error, refresh, hubInvalidateSeq],
+    () => ({ traderId, snapshot, loading, error, refresh, hubInvalidateSeq, showToast }),
+    [traderId, snapshot, loading, error, refresh, hubInvalidateSeq, showToast],
   );
 
   if (loading) {
@@ -126,7 +138,12 @@ export const MyPetTraderProvider = () => {
 
   return (
     <MyPetTraderContext.Provider value={value}>
-      <MyPetTraderHubSync bumpHubInvalidate={bumpHubInvalidate} />
+      <MyPetTraderHubSync
+        bumpHubInvalidate={bumpHubInvalidate}
+        toasts={toasts}
+        dismissToast={dismissToast}
+        onTraderNotificationsAdded={onTraderNotificationsAdded}
+      />
     </MyPetTraderContext.Provider>
   );
 };

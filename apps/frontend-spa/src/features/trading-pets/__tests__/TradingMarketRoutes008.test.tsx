@@ -86,6 +86,7 @@ describe("Trading market routes (008)", () => {
       error: null,
       refresh: vi.fn(),
       hubInvalidateSeq: 0,
+      showToast: vi.fn(),
     });
   });
 

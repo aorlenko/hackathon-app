@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { PrimarySupplyMarketPage } from "../PrimarySupplyMarketPage";
@@ -21,11 +21,15 @@ vi.mock("../tradingPetsApi", async (importOriginal) => {
     getBreeds: vi.fn().mockResolvedValue([]),
     getMarketListings: vi.fn().mockResolvedValue([]),
     getNotifications: vi.fn().mockResolvedValue([]),
+    purchasePets: vi.fn(),
   };
 });
 
 const mockUseMyPetTrader = vi.mocked(useMyPetTrader);
 const getBreeds = vi.mocked(api.getBreeds);
+const purchasePets = vi.mocked(api.purchasePets);
+const refreshMock = vi.fn();
+const showToastMock = vi.fn();
 
 const baseSnapshot: TraderSnapshotDto = {
   traderId: "33333333-3333-3333-3333-000000000001",
@@ -57,16 +61,19 @@ const renderPage = () =>
 
 describe("PrimarySupplyMarketPage", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(api.getBreeds).mockResolvedValue([]);
     vi.mocked(api.getMarketListings).mockResolvedValue([]);
     vi.mocked(api.getNotifications).mockResolvedValue([]);
+    purchasePets.mockResolvedValue({ pets: [], availableCash: 75 });
     mockUseMyPetTrader.mockReturnValue({
       traderId: baseSnapshot.traderId,
       snapshot: baseSnapshot,
       loading: false,
       error: null,
-      refresh: vi.fn(),
+      refresh: refreshMock,
       hubInvalidateSeq: 0,
+      showToast: showToastMock,
     });
   });
 
@@ -97,5 +104,46 @@ describe("PrimarySupplyMarketPage", () => {
       within(headerEl as HTMLElement).getByText(/buy new pets from primary supply at each breed/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/exchange terminal/i)).not.toBeInTheDocument();
+  });
+
+  it("shows a popup toast and refreshes balances after a successful primary purchase", async () => {
+    getBreeds.mockResolvedValue([
+      {
+        id: "breed-1",
+        name: "Aurora Cat",
+        category: "cats",
+        lifespanYears: 10,
+        baselineDesirability: 12,
+        maintenanceCost: 3,
+        retailPrice: 25.5,
+        remainingSupply: 4,
+      },
+    ]);
+    renderPage();
+    await waitFor(() => expect(getBreeds).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: /buy from primary supply/i }));
+
+    await waitFor(() =>
+      expect(purchasePets).toHaveBeenCalledWith(
+        {
+          traderId: baseSnapshot.traderId,
+          breedId: "breed-1",
+          quantity: 1,
+        },
+        "test-token",
+      ),
+    );
+    expect(showToastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Primary purchase completed",
+        body: "1 pet · Aurora Cat · $25.50",
+        variant: "trade",
+      }),
+    );
+    expect(showToastMock.mock.calls[0]?.[0]?.dedupeKey).toMatch(
+      /^primary-purchase-33333333-3333-3333-3333-000000000001-/,
+    );
+    expect(refreshMock).toHaveBeenCalled();
   });
 });

@@ -90,6 +90,7 @@ describe("ResaleMarketplacePage", () => {
       error: null,
       refresh: vi.fn(),
       hubInvalidateSeq: 0,
+      showToast: vi.fn(),
     });
     getMarketListings.mockResolvedValue([listingMine, listingOther]);
   });
@@ -162,6 +163,7 @@ describe("ResaleMarketplacePage", () => {
       error: null,
       refresh: vi.fn(),
       hubInvalidateSeq: 1,
+      showToast: vi.fn(),
     });
     rerender(
       <MemoryRouter>
@@ -198,6 +200,7 @@ describe("ResaleMarketplacePage", () => {
       error: null,
       refresh: vi.fn(),
       hubInvalidateSeq: 0,
+      showToast: vi.fn(),
     });
     render(
       <MemoryRouter>

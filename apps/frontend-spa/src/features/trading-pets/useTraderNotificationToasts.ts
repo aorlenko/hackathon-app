@@ -5,6 +5,8 @@ import { getNotifications } from "./tradingPetsApi";
 
 const TOAST_MS = 6500;
 
+export type TraderToastPayload = Omit<PetTradingToast, "id"> & { dedupeKey: string };
+
 export function useTraderNotificationToasts(
   traderId: string,
   accessToken: string | undefined,
@@ -48,7 +50,7 @@ export function useTraderNotificationToasts(
     setToasts((prev) => prev.filter((t) => t.id !== toastInstanceId));
   }, []);
 
-  const pushToast = useCallback((payload: Omit<PetTradingToast, "id"> & { dedupeKey: string }) => {
+  const showToast = useCallback((payload: TraderToastPayload) => {
     const instanceId = `toast-${payload.dedupeKey}-${Date.now()}`;
     const { dedupeKey: _d, ...rest } = payload;
     setToasts((prev) => [...prev, { ...rest, id: instanceId }]);
@@ -92,14 +94,14 @@ export function useTraderNotificationToasts(
         bodyParts.push(`$${r.amount.toFixed(2)}`);
       }
       bodyParts.push(`with ${r.counterpartyDisplayName}`);
-      pushToast({
+      showToast({
         dedupeKey: r.id,
         title,
         body: bodyParts.join(" · "),
         variant: notificationVariant(r.type),
       });
     }
-  }, [traderId, accessToken, ensureSeeded, pushToast]);
+  }, [traderId, accessToken, ensureSeeded, showToast]);
 
-  return { toasts, dismissToast, onTraderNotificationsAdded };
+  return { toasts, dismissToast, onTraderNotificationsAdded, showToast };
 }

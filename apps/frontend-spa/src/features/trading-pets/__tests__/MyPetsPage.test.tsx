@@ -41,6 +41,7 @@ describe("MyPetsPage", () => {
       error: null,
       refresh: vi.fn(),
       hubInvalidateSeq: 0,
+      showToast: vi.fn(),
     });
   });
 
@@ -74,6 +75,7 @@ describe("MyPetsPage", () => {
       error: null,
       refresh: vi.fn(),
       hubInvalidateSeq: 0,
+      showToast: vi.fn(),
     });
     render(
       <MemoryRouter>
@@ -95,6 +97,7 @@ describe("MyPetsPage", () => {
       error: null,
       refresh: vi.fn(),
       hubInvalidateSeq: 0,
+      showToast: vi.fn(),
     });
     render(
       <MemoryRouter>

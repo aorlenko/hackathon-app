@@ -1,11 +1,25 @@
+import { useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useTradingAuth } from "../auth/AuthProvider";
 import { useMyPetTrader } from "./MyPetTraderContext";
-import { PrimaryMarketPanel } from "./PrimaryMarketPanel";
+import { PrimaryMarketPanel, type PrimaryPurchaseSummary } from "./PrimaryMarketPanel";
 
 export const PrimarySupplyMarketPage = () => {
   const auth = useTradingAuth();
-  const { traderId, snapshot, error: traderError, refresh, hubInvalidateSeq } = useMyPetTrader();
+  const { traderId, snapshot, error: traderError, refresh, hubInvalidateSeq, showToast } =
+    useMyPetTrader();
+  const handlePurchased = useCallback(
+    async ({ breedName, quantity, totalPrice }: PrimaryPurchaseSummary) => {
+      showToast({
+        dedupeKey: `primary-purchase-${traderId}-${Date.now()}`,
+        title: "Primary purchase completed",
+        body: `${quantity === 1 ? "1 pet" : `${quantity} pets`} · ${breedName} · $${totalPrice.toFixed(2)}`,
+        variant: "trade",
+      });
+      await refresh();
+    },
+    [refresh, showToast, traderId],
+  );
 
   return (
     <div className="trading-pets-workspace">
@@ -40,7 +54,7 @@ export const PrimarySupplyMarketPage = () => {
           traderId={traderId}
           accessToken={auth.accessToken}
           reloadToken={hubInvalidateSeq}
-          onPurchased={() => void refresh()}
+          onPurchased={handlePurchased}
         />
       </section>
     </div>

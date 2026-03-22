@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import type { BreedDto } from "./tradingPetsApi";
 import { getBreeds, purchasePets } from "./tradingPetsApi";
 
+export type PrimaryPurchaseSummary = {
+  breedName: string;
+  quantity: number;
+  totalPrice: number;
+};
+
 type Props = {
   traderId: string;
   accessToken?: string;
   /** Bumped when SignalR (or poll) invalidates workspace data so breed supply stays in sync. */
   reloadToken: number;
-  onPurchased: () => void;
+  onPurchased: (purchase: PrimaryPurchaseSummary) => void | Promise<void>;
 };
 
 export const PrimaryMarketPanel = ({
@@ -68,7 +74,11 @@ export const PrimaryMarketPanel = ({
     setLoading(true);
     try {
       await purchasePets({ traderId, breedId, quantity }, accessToken);
-      onPurchased();
+      await onPurchased({
+        breedName: selected.name,
+        quantity,
+        totalPrice: selected.retailPrice * quantity,
+      });
       await loadBreeds();
     } catch (e) {
       setError(

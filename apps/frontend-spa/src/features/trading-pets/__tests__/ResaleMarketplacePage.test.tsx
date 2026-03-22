@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ResaleMarketplacePage } from "../ResaleMarketplacePage";
@@ -213,5 +213,23 @@ describe("ResaleMarketplacePage", () => {
     expect(within(othersRegion).getByText("$42.00")).toBeInTheDocument();
     expect(within(othersRegion).getByRole("button", { name: /raise your bid/i })).toBeInTheDocument();
     expect(within(othersRegion).queryByRole("button", { name: /choose pet to bid on/i })).not.toBeInTheDocument();
+  });
+
+  it("renders the bid details directly under the selected listing", async () => {
+    render(
+      <MemoryRouter>
+        <ResaleMarketplacePage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(getMarketListings).toHaveBeenCalled());
+
+    const othersRegion = screen.getByRole("region", { name: /others' offers/i });
+    const listingCard = within(othersRegion).getByRole("listitem");
+
+    fireEvent.click(within(listingCard).getByRole("button", { name: /choose pet to bid on/i }));
+
+    expect(within(listingCard).getByRole("heading", { name: /place bid/i })).toBeInTheDocument();
+    expect(within(listingCard).getByText(/you're bidding on/i)).toBeInTheDocument();
   });
 });

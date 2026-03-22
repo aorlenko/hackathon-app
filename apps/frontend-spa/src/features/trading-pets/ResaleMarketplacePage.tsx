@@ -223,6 +223,7 @@ export const ResaleMarketplacePage = () => {
             <ul className="trading-pets-list trading-pets-listings">
               {othersListings.map((l) => {
                 const active = findActiveMyBidForListing(snapshot?.myBids, l.listingId);
+                const isBidSelected = othersBidSelection?.listingId === l.listingId;
                 return (
                   <ResaleMarketListingRow
                     key={l.listingId}
@@ -236,37 +237,38 @@ export const ResaleMarketplacePage = () => {
                     myActiveBid={
                       active ? { bidId: active.bidId, amount: active.amount } : null
                     }
+                    bidPanel={
+                      isBidSelected ? (
+                        <div
+                          className="trading-pets-resale-inline-bid"
+                          role="region"
+                          aria-labelledby="resale-inline-bid-heading"
+                        >
+                          <ResalePlaceBidPanel
+                            embedded
+                            traderId={traderId}
+                            accessToken={auth.accessToken}
+                            selectedListing={othersBidSelection}
+                            selectedListingPendingBidAmount={selectedListingPendingBidAmount}
+                            onClearBidSelection={() => {
+                              setActionError(null);
+                              setBidListingId("");
+                            }}
+                            bidAmount={bidAmount}
+                            onBidAmountChange={setBidAmount}
+                            onBidComplete={afterListingMutation}
+                            onBidError={setActionError}
+                          />
+                          {actionError ? (
+                            <p className="trading-pets-error trading-pets-error--soft">{actionError}</p>
+                          ) : null}
+                        </div>
+                      ) : null
+                    }
                   />
                 );
               })}
             </ul>
-            {othersBidSelection ? (
-              <div
-                key={othersBidSelection.listingId}
-                className="trading-pets-resale-inline-bid"
-                role="region"
-                aria-labelledby="resale-inline-bid-heading"
-              >
-                <ResalePlaceBidPanel
-                  embedded
-                  traderId={traderId}
-                  accessToken={auth.accessToken}
-                  selectedListing={othersBidSelection}
-                  selectedListingPendingBidAmount={selectedListingPendingBidAmount}
-                  onClearBidSelection={() => {
-                    setActionError(null);
-                    setBidListingId("");
-                  }}
-                  bidAmount={bidAmount}
-                  onBidAmountChange={setBidAmount}
-                  onBidComplete={afterListingMutation}
-                  onBidError={setActionError}
-                />
-                {actionError ? (
-                  <p className="trading-pets-error trading-pets-error--soft">{actionError}</p>
-                ) : null}
-              </div>
-            ) : null}
           </div>
         </section>
       </div>

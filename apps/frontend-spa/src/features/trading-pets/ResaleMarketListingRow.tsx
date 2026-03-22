@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { MarketListingDto } from "./tradingPetsApi";
 import { ListingSellerActions } from "./ListingSellerActions";
 import { listingSellerClause } from "./listingSellerLabel";
@@ -19,6 +20,7 @@ type Props = {
   allowBidSelection: boolean;
   /** Your active below-ask bid on this listing (buyer view). */
   myActiveBid?: MyActiveBidOnListing | null;
+  bidPanel?: ReactNode;
 };
 
 export const ResaleMarketListingRow = ({
@@ -30,6 +32,7 @@ export const ResaleMarketListingRow = ({
   onSellerSideChanged,
   allowBidSelection,
   myActiveBid,
+  bidPanel,
 }: Props) => {
   const sellerClause = listingSellerClause(
     l.sellerTraderId,
@@ -115,6 +118,7 @@ export const ResaleMarketListingRow = ({
           )}
         </div>
       ) : null}
+      {bidPanel}
     </li>
   );
 };

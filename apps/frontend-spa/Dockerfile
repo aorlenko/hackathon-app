@@ -29,5 +29,8 @@ RUN npm --prefix ./apps/frontend-spa run build
 FROM nginx:1.27-alpine AS final
 COPY apps/frontend-spa/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/apps/frontend-spa/dist /usr/share/nginx/html
+COPY apps/frontend-spa/config.js.template /opt/runtime-config/config.js.template
+COPY apps/frontend-spa/docker-entrypoint.d/40-write-runtime-config.sh /docker-entrypoint.d/40-write-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/40-write-runtime-config.sh
 
 EXPOSE 80

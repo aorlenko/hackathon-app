@@ -1,4 +1,20 @@
+declare global {
+  interface Window {
+    __APP_CONFIG__?: Record<string, string | undefined>;
+  }
+}
+
+const runtimeConfig =
+  typeof window !== "undefined" && window.__APP_CONFIG__
+    ? window.__APP_CONFIG__
+    : undefined;
+
 const read = (key: string, fallback = ""): string => {
+  const runtimeValue = runtimeConfig?.[key];
+  if (typeof runtimeValue === "string" && runtimeValue.length > 0) {
+    return runtimeValue;
+  }
+
   const value = import.meta.env[key];
   return typeof value === "string" && value.length > 0 ? value : fallback;
 };

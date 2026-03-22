@@ -60,6 +60,10 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Restore .NET solution for EF migrations
+        shell: bash
+        run: dotnet restore apps/services/TradingPlatform.sln
+
       - name: Install EF Core CLI
         shell: bash
         run: |

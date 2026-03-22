@@ -8,6 +8,13 @@ export type PrimaryPurchaseSummary = {
   totalPrice: number;
 };
 
+const formatBreedCategory = (category: string) =>
+  category
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 type Props = {
   traderId: string;
   accessToken?: string;
@@ -123,6 +130,22 @@ export const PrimaryMarketPanel = ({
               </label>
               {selected ? (
                 <dl className="trading-pets-primary__facts" id="trading-primary-supply-hint">
+                  <div>
+                    <dt>Category</dt>
+                    <dd>{formatBreedCategory(selected.category)}</dd>
+                  </div>
+                  <div>
+                    <dt>Expected lifespan</dt>
+                    <dd>{selected.lifespanYears} years</dd>
+                  </div>
+                  <div>
+                    <dt>Desirability</dt>
+                    <dd>{selected.baselineDesirability}</dd>
+                  </div>
+                  <div>
+                    <dt>Maintenance cost</dt>
+                    <dd>${selected.maintenanceCost.toFixed(2)}</dd>
+                  </div>
                   <div>
                     <dt>Retail price (each)</dt>
                     <dd>

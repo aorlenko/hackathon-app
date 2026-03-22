@@ -18,6 +18,26 @@ on:
         required: true
         default: rg-trading-hackathon-dev
         type: string
+      frontendImage:
+        description: Optional frontend image override.
+        required: false
+        default: ""
+        type: string
+      marketServiceImage:
+        description: Optional market service image override.
+        required: false
+        default: ""
+        type: string
+      tradeServiceImage:
+        description: Optional trade service image override.
+        required: false
+        default: ""
+        type: string
+      settlementServiceImage:
+        description: Optional settlement service image override.
+        required: false
+        default: ""
+        type: string
       runSmoke:
         description: Run post-deploy smoke checks.
         required: true
@@ -66,6 +86,10 @@ jobs:
           -EnvironmentName "${{ inputs.environmentName }}"
           -Location "${{ inputs.location }}"
           -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -FrontendImage "${{ inputs.frontendImage }}"
+          -MarketServiceImage "${{ inputs.marketServiceImage }}"
+          -TradeServiceImage "${{ inputs.tradeServiceImage }}"
+          -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
 
       - name: Deploy infrastructure and container apps
         shell: pwsh
@@ -74,6 +98,10 @@ jobs:
           -EnvironmentName "${{ inputs.environmentName }}"
           -Location "${{ inputs.location }}"
           -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -FrontendImage "${{ inputs.frontendImage }}"
+          -MarketServiceImage "${{ inputs.marketServiceImage }}"
+          -TradeServiceImage "${{ inputs.tradeServiceImage }}"
+          -SettlementServiceImage "${{ inputs.settlementServiceImage }}"
 
       - name: Resolve Container Apps FQDNs for smoke checks
         id: endpoints

@@ -512,7 +512,7 @@ resource marketService 'Microsoft.App/containerApps@2024-03-01' = if (deployApps
       ]
       scale: {
         minReplicas: 1
-        maxReplicas: 2
+        maxReplicas: 1
       }
     }
   }

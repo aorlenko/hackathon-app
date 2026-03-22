@@ -10,7 +10,7 @@ This feature is **process and configuration oriented**. Entities below are **log
 |-------|-------------|
 | `workflowName` | e.g. `deploy-hackathon` |
 | `trigger` | `workflow_dispatch` |
-| `inputs` | `environmentName`, `location`, `resourceGroupName`, optional image overrides, `runSmoke` |
+| `inputs` | `environmentName`, `location`, `resourceGroupName`, `runSmoke` |
 | `jobEnvironment` | GitHub Environment name (e.g. `hackathon`) |
 | `steps` | Checkout → Azure login → validate Bicep → ensure RG → what-if → deploy → resolve endpoints → optional smoke |
 

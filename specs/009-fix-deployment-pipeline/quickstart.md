@@ -67,7 +67,7 @@ After Azure setup, configure the repository.
 | What | Where | Notes |
 |------|--------|--------|
 | **`ACR_NAME`** | Repo **Settings** → **Secrets and variables** → **Actions** → **Variables** | Azure Container Registry **resource name** (short name, not the `*.azurecr.io` host). |
-| **`ACR_LOGIN_SERVER`** | Same **Variables** page | Login server, e.g. **`myregistry.azurecr.io`**. If either variable is empty, the **whole image job is skipped** (see `if: vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != ''` in `ci.yml`). The same variable is also used by **`deploy-hackathon`** to auto-resolve app images to `frontend-spa:latest`, `market-service:latest`, `trade-service:latest`, and `settlement-service:latest` when no explicit workflow image overrides are supplied. |
+| **`ACR_LOGIN_SERVER`** | Same **Variables** page | Login server, e.g. **`myregistry.azurecr.io`**. If either variable is empty, the **whole image job is skipped** (see `if: vars.ACR_NAME != '' && vars.ACR_LOGIN_SERVER != ''` in `ci.yml`). The same variable is also used by **`deploy-hackathon`** to auto-resolve app images to `frontend-spa:latest`, `market-service:latest`, `trade-service:latest`, and `settlement-service:latest`. |
 | **`AZURE_CLIENT_ID`**, **`AZURE_TENANT_ID`**, **`AZURE_SUBSCRIPTION_ID`** | Same page → **Secrets** at **repository** scope | Used by **`azure/login`** inside the image job. Secrets stored **only** on GitHub Environment **`hackathon`** are **not** available here — duplicate them as **repository** secrets if you use the same app registration, or use a dedicated CI identity. |
 | **Federated credential (OIDC)** | Entra ID → app registration | In addition to `repo:ORG/REPO:environment:hackathon` (for **deploy-hackathon**), add a **second** credential: **Entity type = Branch**, branch = **`main`** or **`master`** (match your default branch). That produces a subject like **`repo:ORG/REPO:ref:refs/heads/master`**. **`ci.yml` does not use** `environment: hackathon`, so the environment-only credential **never** applies to this workflow. |
 | **RBAC** | Azure | Grant that service principal **AcrPush** (or equivalent) on the target registry. |
@@ -76,7 +76,7 @@ After Azure setup, configure the repository.
 
 Dockerfiles in this repo assume the **monorepo root** as build context (`COPY apps/...`). **`ci.yml`** passes **`context: .`** so `docker build --file …/Dockerfile .` matches local full-repo builds.
 
-Without the two **ACR_** variables, **CI** will not build or push your app images automatically. And without **`ACR_LOGIN_SERVER`** (or explicit deploy image overrides), **`deploy-hackathon`** now fails fast instead of silently deploying placeholder hello-world containers.
+Without the two **ACR_** variables, **CI** will not build or push your app images automatically. And without **`ACR_LOGIN_SERVER`**, **`deploy-hackathon`** now fails fast instead of silently deploying placeholder hello-world containers.
 
 ---
 
@@ -112,7 +112,7 @@ For deploy workflow inventories, see **`contracts/deployment-pipeline-contract.m
 ## 6. Run deployment
 
 1. GitHub → **Actions** → workflow **deploy-hackathon** → **Run workflow**.  
-2. Set inputs: `environmentName`, `location`, `resourceGroupName`, optional container image overrides, `runSmoke` (default on). If image override inputs are left blank, the workflow automatically deploys `:latest` tags from **`vars.ACR_LOGIN_SERVER`**.  
+2. Set inputs: `environmentName`, `location`, `resourceGroupName`, `runSmoke` (default on). The workflow automatically deploys `:latest` tags from **`vars.ACR_LOGIN_SERVER`**.  
 3. Expected step order: **Validate Bicep templates and hackathon parameters JSON** → **Ensure resource group exists (idempotent)** → **ARM what-if** → **Deploy infrastructure and container apps** → **Resolve Container Apps FQDNs for smoke checks** → **Run HTTP smoke checks** (if `runSmoke`).
 
 ---

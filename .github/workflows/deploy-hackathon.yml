@@ -18,26 +18,6 @@ on:
         required: true
         default: rg-trading-hackathon-dev
         type: string
-      frontendImage:
-        description: Optional frontend image override.
-        required: false
-        default: ""
-        type: string
-      marketServiceImage:
-        description: Optional market service image override.
-        required: false
-        default: ""
-        type: string
-      tradeServiceImage:
-        description: Optional trade service image override.
-        required: false
-        default: ""
-        type: string
-      settlementServiceImage:
-        description: Optional settlement service image override.
-        required: false
-        default: ""
-        type: string
       runSmoke:
         description: Run post-deploy smoke checks.
         required: true
@@ -84,23 +64,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          frontend_image="${{ inputs.frontendImage }}"
-          market_image="${{ inputs.marketServiceImage }}"
-          trade_image="${{ inputs.tradeServiceImage }}"
-          settlement_image="${{ inputs.settlementServiceImage }}"
-
-          if [ -n "${ACR_LOGIN_SERVER}" ]; then
-            frontend_image="${frontend_image:-${ACR_LOGIN_SERVER}/frontend-spa:latest}"
-            market_image="${market_image:-${ACR_LOGIN_SERVER}/market-service:latest}"
-            trade_image="${trade_image:-${ACR_LOGIN_SERVER}/trade-service:latest}"
-            settlement_image="${settlement_image:-${ACR_LOGIN_SERVER}/settlement-service:latest}"
-          fi
-
-          if [ -z "${frontend_image}" ] || [ -z "${market_image}" ] || [ -z "${trade_image}" ] || [ -z "${settlement_image}" ]; then
-            echo "::error::Image resolution failed. Provide explicit workflow image inputs or set repository/environment variable ACR_LOGIN_SERVER so deploy-hackathon can use :latest tags automatically."
+          if [ -z "${ACR_LOGIN_SERVER}" ]; then
+            echo "::error::Image resolution failed. Set repository/environment variable ACR_LOGIN_SERVER so deploy-hackathon can resolve :latest tags automatically."
             exit 1
           fi
+
+          frontend_image="${ACR_LOGIN_SERVER}/frontend-spa:latest"
+          market_image="${ACR_LOGIN_SERVER}/market-service:latest"
+          trade_image="${ACR_LOGIN_SERVER}/trade-service:latest"
+          settlement_image="${ACR_LOGIN_SERVER}/settlement-service:latest"
 
           echo "frontend_image=${frontend_image}" >> "$GITHUB_OUTPUT"
           echo "market_image=${market_image}" >> "$GITHUB_OUTPUT"

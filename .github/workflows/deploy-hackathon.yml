@@ -55,6 +55,18 @@ jobs:
         shell: pwsh
         run: ./scripts/infra/validate-bicep.ps1
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install EF Core CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
       - name: Ensure resource group exists (idempotent)
         shell: pwsh
         run: az group create --name "${{ inputs.resourceGroupName }}" --location "${{ inputs.location }}"
@@ -92,7 +104,77 @@ jobs:
           -TradeServiceImage "${{ steps.images.outputs.trade_image }}"
           -SettlementServiceImage "${{ steps.images.outputs.settlement_image }}"
 
-      - name: Deploy infrastructure and container apps
+      - name: Deploy infrastructure only
+        shell: pwsh
+        run: >
+          ./scripts/infra/deploy-hackathon.ps1
+          -EnvironmentName "${{ inputs.environmentName }}"
+          -Location "${{ inputs.location }}"
+          -ResourceGroupName "${{ inputs.resourceGroupName }}"
+          -DeployApps:$false
+          -FrontendImage "${{ steps.images.outputs.frontend_image }}"
+          -MarketServiceImage "${{ steps.images.outputs.market_image }}"
+          -TradeServiceImage "${{ steps.images.outputs.trade_image }}"
+          -SettlementServiceImage "${{ steps.images.outputs.settlement_image }}"
+
+      - name: Resolve SQL targets for EF migrations
+        id: sql
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT_NAME=$(jq -r '.parameters.projectName.value' infra/environments/hackathon/parameters.dev.json)
+          ENV_NAME="${{ inputs.environmentName }}"
+          RG="${{ inputs.resourceGroupName }}"
+          SQL_FQDN=$(az sql server list --resource-group "$RG" --query "[?starts_with(name, 'sql-${PROJECT_NAME}-${ENV_NAME}-')].fullyQualifiedDomainName | [0]" -o tsv)
+          if [ -z "$SQL_FQDN" ]; then
+            echo "::error::Could not resolve SQL server FQDN in resource group '$RG'."
+            exit 1
+          fi
+
+          echo "sql_fqdn=$SQL_FQDN" >> "$GITHUB_OUTPUT"
+          echo "market_db=${PROJECT_NAME}-${ENV_NAME}-market" >> "$GITHUB_OUTPUT"
+          echo "trade_db=${PROJECT_NAME}-${ENV_NAME}-trade" >> "$GITHUB_OUTPUT"
+          echo "settlement_db=${PROJECT_NAME}-${ENV_NAME}-settlement" >> "$GITHUB_OUTPUT"
+
+      - name: Apply EF Core migrations
+        shell: bash
+        env:
+          SQL_FQDN: ${{ steps.sql.outputs.sql_fqdn }}
+          MARKET_DB: ${{ steps.sql.outputs.market_db }}
+          TRADE_DB: ${{ steps.sql.outputs.trade_db }}
+          SETTLEMENT_DB: ${{ steps.sql.outputs.settlement_db }}
+        run: |
+          set -euo pipefail
+
+          build_connection_string() {
+            local db_name="$1"
+            printf 'Server=tcp:%s,1433;Initial Catalog=%s;Persist Security Info=False;User ID=%s;Password=%s;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;' \
+              "$SQL_FQDN" "$db_name" "$SQL_ADMIN_LOGIN" "$SQL_ADMIN_PASSWORD"
+          }
+
+          run_migration() {
+            local service_name="$1"
+            local db_name="$2"
+            local project_path="$3"
+            local startup_path="$4"
+            echo "Applying EF migrations for ${service_name} -> ${db_name}..."
+            ConnectionStrings__Sql="$(build_connection_string "$db_name")" \
+              dotnet ef database update --project "$project_path" --startup-project "$startup_path"
+          }
+
+          run_migration "market-service" "$MARKET_DB" \
+            "apps/services/market-service/src/MarketService.Infrastructure/MarketService.Infrastructure.csproj" \
+            "apps/services/market-service/src/MarketService/MarketService.csproj"
+
+          run_migration "trade-service" "$TRADE_DB" \
+            "apps/services/trade-service/src/TradeService.Infrastructure/TradeService.Infrastructure.csproj" \
+            "apps/services/trade-service/src/TradeService/TradeService.csproj"
+
+          run_migration "settlement-service" "$SETTLEMENT_DB" \
+            "apps/services/settlement-service/src/SettlementService.Infrastructure/SettlementService.Infrastructure.csproj" \
+            "apps/services/settlement-service/src/SettlementService/SettlementService.csproj"
+
+      - name: Deploy container apps
         shell: pwsh
         run: >
           ./scripts/infra/deploy-hackathon.ps1

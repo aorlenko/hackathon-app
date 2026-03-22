@@ -62,6 +62,7 @@ Aligned with **`contracts/deployment-pipeline-contract.md`** sections C and D (S
 | `template` | `infra/bicep/main.bicep` |
 | `defaultParametersFile` | `infra/environments/hackathon/parameters.dev.json` |
 | `skuPolicy` | Lowest suitable tier per component; documented exceptions (e.g. Service Bus Standard for topics) |
+| `sqlDatabases` | `trading-<environment>-market`, `trading-<environment>-trade`, `trading-<environment>-settlement` |
 | `region` | Workflow input `location` (default e.g. `eastus`) |
 | `resourceGroup` | Workflow input `resourceGroupName` |
 

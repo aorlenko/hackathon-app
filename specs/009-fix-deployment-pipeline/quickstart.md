@@ -88,7 +88,7 @@ Defaults in **`infra/bicep/main.bicep`** and **`infra/bicep/modules/monitoring.b
 |-----------|----------------|-----------|
 | Azure Container Registry | **Basic** | Lowest ACR SKU adequate for demo push/pull. |
 | Azure Service Bus | **Standard** | **Exception**: template uses a **topic** with subscriptions; **Basic** does not support topics. Standard is the minimum feature-compatible tier. |
-| Azure SQL Database | **S0** (Standard tier) | Low entry DTU; suitable for demo load. |
+| Azure SQL Database | **3 x S0** (Standard tier) | One database per backend service: market, trade, settlement. |
 | Key Vault | **Standard** | Standard vault SKU; Premium not required for this template. |
 | Container Apps environment | Consumption-style managed environment | No dedicated workload profile in template; pay for use. |
 | Container Apps (each service) | **0.5 CPU / 1.0 Gi** memory (see `main.bicep`) | Small footprint per app for demo. |
@@ -113,7 +113,7 @@ For deploy workflow inventories, see **`contracts/deployment-pipeline-contract.m
 
 1. GitHub → **Actions** → workflow **deploy-hackathon** → **Run workflow**.  
 2. Set inputs: `environmentName`, `location`, `resourceGroupName`, `runSmoke` (default on). The workflow automatically deploys `:latest` tags from **`vars.ACR_LOGIN_SERVER`**.  
-3. Expected step order: **Validate Bicep templates and hackathon parameters JSON** → **Ensure resource group exists (idempotent)** → **ARM what-if** → **Deploy infrastructure and container apps** → **Resolve Container Apps FQDNs for smoke checks** → **Run HTTP smoke checks** (if `runSmoke`).
+3. Expected step order: **Validate Bicep templates and hackathon parameters JSON** → **Setup .NET SDK / EF CLI** → **Ensure resource group exists (idempotent)** → **ARM what-if** → **Deploy infrastructure only** → **Apply EF Core migrations** (market, trade, settlement) → **Deploy container apps** → **Resolve Container Apps FQDNs for smoke checks** → **Run HTTP smoke checks** (if `runSmoke`).
 
 ---
 

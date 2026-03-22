@@ -40,6 +40,9 @@ param auth0Audience string = 'https://trading-platform-api'
 @description('Auth0 SPA client id.')
 param auth0ClientId string = 'replace-me'
 
+@description('Whether to deploy Container Apps in this run. False allows infra-first deployments before EF migrations.')
+param deployApps bool = true
+
 var namePrefix = '${projectName}-${environmentName}'
 var sqlServerName = 'sql-${namePrefix}-${uniqueString(resourceGroup().id)}'
 var marketSqlDatabaseName = '${projectName}-${environmentName}-market'
@@ -375,7 +378,7 @@ resource settlementKeyVaultUser 'Microsoft.Authorization/roleAssignments@2022-04
   }
 }
 
-resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = if (deployApps) {
   name: containerAppEnvironmentName
   location: location
   tags: tags
@@ -390,7 +393,7 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' 
   }
 }
 
-resource marketService 'Microsoft.App/containerApps@2024-03-01' = {
+resource marketService 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
   name: marketAppName
   location: location
   tags: tags
@@ -511,7 +514,7 @@ resource marketService 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-resource tradeService 'Microsoft.App/containerApps@2024-03-01' = {
+resource tradeService 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
   name: tradeAppName
   location: location
   tags: tags
@@ -631,7 +634,7 @@ resource tradeService 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-resource settlementService 'Microsoft.App/containerApps@2024-03-01' = {
+resource settlementService 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
   name: settlementAppName
   location: location
   tags: tags
@@ -751,7 +754,7 @@ resource settlementService 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-resource frontendSpa 'Microsoft.App/containerApps@2024-03-01' = {
+resource frontendSpa 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
   name: frontendAppName
   location: location
   tags: tags
@@ -828,15 +831,15 @@ resource frontendSpa 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'VITE_MARKET_API_BASE_URL'
-              value: 'https://${marketService.properties.configuration.ingress.fqdn}'
+              value: 'https://${marketService!.properties.configuration.ingress.fqdn}'
             }
             {
               name: 'VITE_TRADE_API_BASE_URL'
-              value: 'https://${tradeService.properties.configuration.ingress.fqdn}'
+              value: 'https://${tradeService!.properties.configuration.ingress.fqdn}'
             }
             {
               name: 'VITE_SETTLEMENT_API_BASE_URL'
-              value: 'https://${settlementService.properties.configuration.ingress.fqdn}'
+              value: 'https://${settlementService!.properties.configuration.ingress.fqdn}'
             }
           ]
         }
@@ -850,9 +853,13 @@ resource frontendSpa 'Microsoft.App/containerApps@2024-03-01' = {
 }
 
 output acrLoginServer string = acr.properties.loginServer
-output frontendUrl string = 'https://${frontendSpa.properties.configuration.ingress.fqdn}'
-output marketApiUrl string = 'https://${marketService.properties.configuration.ingress.fqdn}'
-output tradeApiUrl string = 'https://${tradeService.properties.configuration.ingress.fqdn}'
-output settlementApiUrl string = 'https://${settlementService.properties.configuration.ingress.fqdn}'
+output sqlServerFullyQualifiedDomainName string = sqlServer.properties.fullyQualifiedDomainName
+output marketSqlDatabaseName string = marketSqlDatabaseName
+output tradeSqlDatabaseName string = tradeSqlDatabaseName
+output settlementSqlDatabaseName string = settlementSqlDatabaseName
+output frontendUrl string = deployApps ? 'https://${frontendSpa!.properties.configuration.ingress.fqdn}' : ''
+output marketApiUrl string = deployApps ? 'https://${marketService!.properties.configuration.ingress.fqdn}' : ''
+output tradeApiUrl string = deployApps ? 'https://${tradeService!.properties.configuration.ingress.fqdn}' : ''
+output settlementApiUrl string = deployApps ? 'https://${settlementService!.properties.configuration.ingress.fqdn}' : ''
 output keyVaultName string = keyVault.name
 output applicationInsightsName string = monitoring.outputs.applicationInsightsName

@@ -14,6 +14,7 @@ param(
     [string]$MarketServiceImage = "",
     [string]$TradeServiceImage = "",
     [string]$SettlementServiceImage = "",
+    [bool]$DeployApps = $true,
     [switch]$WhatIf,
     [switch]$CreateResourceGroup
 )
@@ -57,7 +58,8 @@ $deploymentName = "hackathon-$EnvironmentName-$(Get-Date -Format 'yyyyMMddHHmmss
 $parameterArguments = @(
     "@$ParametersFile",
     "environmentName=$EnvironmentName",
-    "location=$Location"
+    "location=$Location",
+    "deployApps=$($DeployApps.ToString().ToLowerInvariant())"
 )
 
 if ($SqlAdminLogin) {

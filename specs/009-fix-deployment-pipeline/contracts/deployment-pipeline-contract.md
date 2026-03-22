@@ -24,7 +24,7 @@ Naming contract for Container Apps (endpoint resolution step) must stay aligned 
 
 where `projectName` is read from `infra/environments/hackathon/parameters.dev.json` at `parameters.projectName.value`.
 
-**Job step order (reference)** — `deploy` job: Checkout repository → Azure login (OIDC) → Validate Bicep templates and hackathon parameters JSON → Ensure resource group exists (idempotent) → ARM what-if → Deploy infrastructure and container apps → Resolve Container Apps FQDNs for smoke checks → optional Run HTTP smoke checks.
+**Job step order (reference)** — `deploy` job: Checkout repository → Azure login (OIDC) → Validate Bicep templates and hackathon parameters JSON → Setup .NET SDK / EF CLI → Ensure resource group exists (idempotent) → ARM what-if → Deploy infrastructure only → Apply EF Core migrations (market, trade, settlement) → Deploy container apps → Resolve Container Apps FQDNs for smoke checks → optional Run HTTP smoke checks.
 
 ---
 
@@ -86,6 +86,15 @@ Script `deploy-hackathon.ps1` always passes:
 - `location=<workflow input>`
 
 Optional CLI overrides when env vars are set: `sqlAdminLogin`, `sqlAdminPassword`, `auth0Domain`, `auth0Audience`, and `auth0ClientId`. App images are resolved by the workflow from `ACR_LOGIN_SERVER` using `:latest` tags.
+
+Database topology for cloud deploy:
+
+- One logical SQL server
+- `trading-<environmentName>-market`
+- `trading-<environmentName>-trade`
+- `trading-<environmentName>-settlement`
+
+The workflow applies EF Core migrations to each database during deployment, before Container Apps are rolled out.
 
 ---
 
